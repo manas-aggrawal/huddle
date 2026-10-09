@@ -1,7 +1,7 @@
-version: "3.3"
 services:
   db:
-    image: postgres:latest
+    # Pinned to the major version the data volume was created with.
+    image: postgres:17
     restart: always
     environment:
       - POSTGRES_USER=${PG_USER}
@@ -11,11 +11,14 @@ services:
       - "${PORT_DATABASE}:5432"
     volumes:
       - db:/var/lib/postgresql/data
+  # Optional: run the API in a container instead of `npm run dev` on your machine.
   api:
     build:
-      context: .
-    container_name: nest-bp
-    image: nest-bp
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+      target: dev
+    container_name: huddle-api
+    image: huddle-api:dev
     env_file:
       - .env
     ports:
@@ -25,8 +28,8 @@ services:
     depends_on:
       - db
     volumes:
-      - ".:/src/"
-      - "./node_modules:/src/node_modules/"
+      - ./src:/app/apps/api/src
+      - ./prisma:/app/apps/api/prisma
 volumes:
   db:
     driver: local

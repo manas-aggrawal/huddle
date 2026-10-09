@@ -95,11 +95,7 @@ export class UserController {
 	async login(
 		@Body() body: LoginPayloadDto,
 		@Request()
-		req: Req & {
-			user: Omit<UserResponseDto, 'access_token' | 'refresh_token'> & {
-				password: string;
-			};
-		},
+		req: Req & { user: UserProfileDto },
 	): Promise<UserResponseDto> {
 		const { user } = req;
 		const data = await this.authService.giveTokens({

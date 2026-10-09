@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client';
+import { Role } from '@src/enum/role';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 

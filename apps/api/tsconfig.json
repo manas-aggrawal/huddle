@@ -1,20 +1,19 @@
 {
 	"compilerOptions": {
-		"module": "node16",
+		"module": "nodenext",
 		"declaration": true,
 		"removeComments": true,
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true,
 		"allowSyntheticDefaultImports": true,
-		"target": "ES2021",
+		"target": "ES2022",
 		"sourceMap": true,
 		"outDir": "./dist",
 		"tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
 		"rootDir": "./src",
-		"moduleResolution": "node16",
+		"moduleResolution": "nodenext",
 		"paths": {
 			"@src/*": ["./src/*"],
-			"@prisma/*": ["./prisma/*"],
 			"@auth/*": ["./src/auth/*"],
 			"@configs/*": ["./src/configs/*"],
 			"@middleware/*": ["./src/middleware/*"],

@@ -6,6 +6,7 @@ import {
 	JWT_REFRESH_TOKEN_SECRET,
 } from '@src/configs/env-vars';
 import { PrismaService } from '@src/prisma/prisma.service';
+import { toUserDto } from '@src/user/user.mapper';
 import { UserService } from '@src/user/user.service';
 import * as bcrypt from 'bcryptjs';
 import { DefaultPayload } from './interfaces/payload.interface';
@@ -30,11 +31,8 @@ export class AuthService {
 		if (user) {
 			const validatePassword = await bcrypt.compare(password, user.password);
 			if (validatePassword) {
-				return {
-					...user,
-					createdAt: user.createdAt.toISOString(),
-					updatedAt: user.updatedAt.toISOString(),
-				};
+				// Never let the password hash travel on req.user.
+				return toUserDto(user);
 			}
 		}
 		throw new UnauthorizedException({

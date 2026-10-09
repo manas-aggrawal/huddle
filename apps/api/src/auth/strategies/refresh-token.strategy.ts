@@ -15,10 +15,14 @@ export class RefreshTokenStrategy extends PassportStrategy(
 		});
 	}
 
+	// Tokens are signed with { id, email, username, role } (see AuthService.giveTokens).
+	// Return exactly that, without iat/exp, so the controller can re-sign it.
 	async validate(payload: UserPayload): Promise<UserFromJwt> {
 		return {
-			id: payload.sub,
+			id: payload.id,
+			email: payload.email,
 			username: payload.username,
+			role: payload.role,
 		};
 	}
 }

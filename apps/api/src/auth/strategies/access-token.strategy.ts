@@ -25,6 +25,11 @@ export class AccessTokenStrategy extends PassportStrategy(
 		if (!payload) {
 			throw new UnauthorizedException();
 		}
-		return payload;
+		return {
+			id: payload.id,
+			email: payload.email,
+			username: payload.username,
+			role: payload.role,
+		};
 	}
 }
