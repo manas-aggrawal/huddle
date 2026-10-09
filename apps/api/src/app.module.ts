@@ -7,6 +7,7 @@ import { THROTTLE_LIMIT, THROTTLE_TTL } from './configs/env-vars';
 import { HealthModule } from './health/health.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { PrismaModule } from './prisma/prisma.module';
+import { SessionModule } from './session/session.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { UserModule } from './user/user.module';
 
@@ -28,6 +29,7 @@ import { UserModule } from './user/user.module';
 		HealthModule,
 		UserModule,
 		TimelineModule,
+		SessionModule,
 	],
 	providers: [
 		{
