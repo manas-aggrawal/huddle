@@ -1,0 +1,34 @@
+{
+	"compilerOptions": {
+		"module": "node16",
+		"declaration": true,
+		"removeComments": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"target": "ES2021",
+		"sourceMap": true,
+		"outDir": "./dist",
+		"tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
+		"rootDir": "./src",
+		"moduleResolution": "node16",
+		"paths": {
+			"@src/*": ["./src/*"],
+			"@prisma/*": ["./prisma/*"],
+			"@auth/*": ["./src/auth/*"],
+			"@configs/*": ["./src/configs/*"],
+			"@middleware/*": ["./src/middleware/*"],
+			"@user/*": ["./src/user/*"]
+		},
+		"incremental": true,
+		"skipLibCheck": true,
+		"strictNullChecks": false,
+		"noImplicitAny": false,
+		"strictBindCallApply": false,
+		"forceConsistentCasingInFileNames": false,
+		"noFallthroughCasesInSwitch": false,
+		"esModuleInterop": true
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist"]
+}
