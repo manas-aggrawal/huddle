@@ -15,6 +15,7 @@
 		"dev:api": "npm run start:dev -w @huddle/api",
 		"dev:web": "npm run dev -w @huddle/web",
 		"build": "npm run build -w @huddle/shared && npm run build -w @huddle/api && npm run build -w @huddle/web",
+		"typecheck": "npm run typecheck -w @huddle/api && npm exec -w @huddle/web -- tsc -b --noEmit",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "biome check --write .",

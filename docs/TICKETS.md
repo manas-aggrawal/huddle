@@ -87,7 +87,7 @@ Already in place from #2: Vitest + SWC (`vitest.e2e.config.ts`), `createTestApp(
   - `registerAndLogin(name)`: returns `{ user, token }`
   - `authed(token)`: a Supertest agent with the auth header set
   - `connectSocket(token, sessionId)`: a socket.io-client connection
-  - `connectDoc(token, sessionId)`: a Hocuspocus provider plus a Y.Doc
+  - `connectDoc(token, sessionId)`: moved to #8, since it needs the Hocuspocus server to exist
 - [ ] **Mock LLM:** the provider layer (T12) accepts an injected model, and tests use the AI SDK's `MockLanguageModelV3` (from `ai/test`) with scripted responses and tool calls
 - [ ] **Fixture web server:** a local HTTP server that serves canned HTML pages and a fake SearXNG JSON endpoint, so scraper and search tests never touch the internet
 - [ ] `waitForEvent(socket, type, predicate)` helper with a timeout
@@ -256,6 +256,7 @@ Run a Hocuspocus server inside the API process to sync the shared Yjs document f
   - ProseMirror fragment `default`
   - headings carry `data-section-id`
   - a `human` mark with `{ userId }` on text that people typed
+- [ ] Test helper `connectDoc(app, token, sessionId)` in `test/utils/` (moved here from #3): a Hocuspocus provider plus a Y.Doc, resolving once synced
 - [ ] `AgentDocWriter` service: opens a server-side direct connection to a session's doc. Methods: `insertSection(sectionId, title)`, `appendToSection(sectionId, textChunk)`, `getSectionText(sectionId)`, `getHumanOwnedRanges(sectionId)`.
 - [ ] Throttled `DOC_EDITED` timeline events for human edits, at most one per user per section per minute
 

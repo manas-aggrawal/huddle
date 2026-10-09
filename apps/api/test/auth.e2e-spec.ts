@@ -1,5 +1,4 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { PrismaService } from '@src/prisma/prisma.service';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from './utils/create-app';
@@ -27,9 +26,6 @@ describe('Auth flows', () => {
 	});
 
 	afterAll(async () => {
-		await app
-			.get(PrismaService)
-			.user.deleteMany({ where: { username: { startsWith: `t${run}` } } });
 		await app.close();
 	});
 

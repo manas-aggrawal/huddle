@@ -12,13 +12,17 @@ import { UserModule } from './user/user.module';
 
 @Module({
 	imports: [
-		ThrottlerModule.forRoot([
-			{
-				// Default: 100 requests per minute. Override per-route with @Throttle().
-				ttl: Number(THROTTLE_TTL) || 60000,
-				limit: Number(THROTTLE_LIMIT) || 100,
-			},
-		]),
+		ThrottlerModule.forRoot({
+			throttlers: [
+				{
+					// Default: 100 requests per minute. Override per-route with @Throttle().
+					ttl: Number(THROTTLE_TTL) || 60000,
+					limit: Number(THROTTLE_LIMIT) || 100,
+				},
+			],
+			// e2e suites register many users from one IP; Vitest sets NODE_ENV=test.
+			skipIf: () => process.env.NODE_ENV === 'test',
+		}),
 		AuthModule,
 		PrismaModule,
 		HealthModule,
