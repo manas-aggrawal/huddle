@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STANDARD
+  ADMIN
+}
+
+// Test model user for login, must delete this model before start developing.
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique() @db.VarChar(50)
+  firstname String   @db.VarChar(50)
+  lastname  String   @db.VarChar(50)
+  email     String   @unique() @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  role      Role     @default(STANDARD)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([username])
+}
+
+model CrudSample {
+  id         String  @id @default(uuid())
+  testField1 String
+  testField2 Int
+  testField3 Boolean
+}

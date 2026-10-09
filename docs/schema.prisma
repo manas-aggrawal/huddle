@@ -1,0 +1,489 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+/// App-wide role from the boilerplate (not the per-session role). ADMIN = operates Huddle itself; STANDARD = everyone else.
+enum Role {
+  STANDARD
+  ADMIN
+}
+
+/// ADMIN: manage members, token pool, billing, delete workspace. MEMBER: create sessions, use the pool.
+/// Unused in the MVP (every workspace is personal, with one member).
+enum WorkspaceRole {
+  ADMIN
+  MEMBER
+}
+
+enum SessionRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum SessionStatus {
+  PLANNING
+  RUNNING
+  WAITING
+  PAUSED
+  DONE
+}
+
+enum AgentState {
+  IDLE
+  THINKING
+  RESEARCHING
+  WRITING
+}
+
+enum Effort {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum StepStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  SKIPPED
+  BLOCKED
+}
+
+enum MessageMode {
+  SUGGEST
+  INTERRUPT
+  ASK
+  COMMENT
+}
+
+enum MessageStatus {
+  QUEUED
+  ACKNOWLEDGED
+  APPLIED
+  DECLINED
+  ANSWERED
+}
+
+enum ApprovalKind {
+  OUTLINE
+  REWRITE_HUMAN_TEXT
+  MARK_FINAL
+  BUDGET
+  CUSTOM
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ActorType {
+  USER
+  AGENT
+  SYSTEM
+}
+
+enum EventType {
+  SESSION_CREATED
+  STATUS_CHANGED
+  MEMBER_JOINED
+  ROLE_CHANGED
+  HUMAN_MESSAGE
+  AGENT_MESSAGE
+  AGENT_ACK
+  STEP_STARTED
+  STEP_COMPLETED
+  PLAN_UPDATED
+  TOOL_CALL
+  APPROVAL_REQUESTED
+  APPROVAL_RESOLVED
+  CONFLICT_RAISED
+  CONFLICT_RESOLVED
+  DECISION_PINNED
+  HANDOFF
+  MODEL_CHANGED
+  BUDGET_WARNING
+  DOC_EDITED
+}
+
+enum NotificationType {
+  APPROVAL_REQUESTED
+  QUESTION_FOR_YOU
+  MENTION
+  CONFLICT_RAISED
+  HANDOFF_RECEIVED
+}
+
+// ─────────────────────────────── Identity ───────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique @db.VarChar(50)
+  firstname String   @db.VarChar(50)
+  lastname  String   @db.VarChar(50)
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  role      Role     @default(STANDARD)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceMemberships WorkspaceMember[]
+  sessionMemberships   SessionMember[]
+  invitesCreated       Invite[]
+  planStepsCreated     PlanStep[]
+  messages             Message[]
+  approvalsResolved    Approval[]
+  conflictsResolved    Conflict[]
+  decisionsCreated     Decision[]
+  handoffsFrom         Handoff[]         @relation("HandoffFrom")
+  handoffsTo           Handoff[]         @relation("HandoffTo")
+  timelineEvents       TimelineEvent[]
+  notifications        Notification[]
+
+  @@index([email])
+  @@index([username])
+}
+
+/// The team, and the shared token pool every session in it draws from.
+/// Each LLM call checks the pool first, then the session's optional cap.
+model Workspace {
+  id                   String   @id @default(uuid())
+  name                 String   @db.VarChar(100)
+  /// Tokens allowed per billing period, shared by all sessions in the workspace
+  tokenAllowance       Int      @default(2000000)
+  periodStart          DateTime @default(now())
+  /// Cached sum of UsageRecord tokens since periodStart; reset when a new period starts
+  tokensUsedThisPeriod Int      @default(0)
+  createdAt            DateTime @default(now())
+
+  members   WorkspaceMember[]
+  sessions  Session[]
+  pageCache PageCache[]
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+// ─────────────────────────────── Session (the room) ───────────────────────────────
+
+/// Any workspace member can create a session; the creator becomes its OWNER (SessionMember).
+/// The creator is also the actor of the SESSION_CREATED timeline event.
+/// status WAITING is always set/cleared in the same transaction that creates/resolves the blocking Approval.
+model Session {
+  id            String        @id @default(uuid())
+  workspaceId   String
+  title         String        @db.VarChar(200)
+  goal          String        @db.Text
+  status        SessionStatus @default(PLANNING)
+  agentState    AgentState    @default(IDLE)
+  modelProvider String        @default("groq") @db.VarChar(50)
+  modelId       String        @db.VarChar(100)
+  effort        Effort        @default(MEDIUM)
+  /// Optional per-session cap so one session can't drain the workspace pool (null = no cap)
+  tokenBudget   Int?
+  tokensUsed    Int           @default(0)
+  /// Counter used to hand out TimelineEvent.seq atomically
+  lastEventSeq  Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  completedAt   DateTime?
+
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members       SessionMember[]
+  invites       Invite[]
+  document      Document?
+  planSteps     PlanStep[]
+  messages      Message[]
+  approvals     Approval[]
+  conflicts     Conflict[]
+  decisions     Decision[]
+  handoffs      Handoff[]
+  events        TimelineEvent[]
+  sources       Source[]
+  usage         UsageRecord[]
+  notifications Notification[]
+
+  @@index([workspaceId, status])
+}
+
+/// Raw SQL in the migration (Prisma can't express these):
+/// CREATE UNIQUE INDEX "one_owner_per_session" ON "SessionMember"("sessionId") WHERE role = 'OWNER';
+/// ALTER TABLE "SessionMember" ADD CONSTRAINT "can_approve_only_editors" CHECK ("canApprove" = false OR role = 'EDITOR');
+model SessionMember {
+  id          String      @id @default(uuid())
+  sessionId   String
+  userId      String
+  role        SessionRole
+  /// Editors can approve gates only if the Owner allows it
+  canApprove  Boolean     @default(false)
+  /// Catch-up = timeline events with seq > lastSeenSeq
+  lastSeenSeq Int         @default(0)
+  joinedAt    DateTime    @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
+
+/// Invite link (EDITOR) or share link (VIEWER)
+model Invite {
+  id          String      @id @default(uuid())
+  sessionId   String
+  token       String      @unique @db.VarChar(64)
+  role        SessionRole
+  createdById String
+  useCount    Int         @default(0)
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime    @default(now())
+
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
+}
+
+/// Yjs document snapshot persisted by Hocuspocus. Human-text attribution lives inside the Yjs doc as marks.
+model Document {
+  sessionId String   @id
+  ydocState Bytes
+  updatedAt DateTime @updatedAt
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────── Agent work ───────────────────────────────
+
+model PlanStep {
+  id               String     @id @default(uuid())
+  sessionId        String
+  position         Int
+  title            String     @db.VarChar(200)
+  description      String?    @db.Text
+  status           StepStatus @default(PENDING)
+  /// Id of the heading node in the Yjs doc this step writes into
+  sectionId        String?    @db.VarChar(64)
+  requiresApproval Boolean    @default(false)
+  /// null = proposed by the agent
+  createdById      String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdBy User?      @relation(fields: [createdById], references: [id])
+  messages  Message[]
+  approvals Approval[]
+  conflicts Conflict[]
+
+  @@index([sessionId, position])
+}
+
+/// Human input to the agent: Suggest / Interrupt / Ask / doc Comment
+model Message {
+  id          String        @id @default(uuid())
+  sessionId   String
+  authorId    String
+  mode        MessageMode
+  content     String        @db.Text
+  /// For comments: { sectionId, from, to, quote }
+  anchor      Json?
+  planStepId  String?
+  status      MessageStatus @default(QUEUED)
+  /// Agent's acknowledgment or answer
+  response    String?       @db.Text
+  createdAt   DateTime      @default(now())
+  processedAt DateTime?
+
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  author    User       @relation(fields: [authorId], references: [id])
+  planStep  PlanStep?  @relation(fields: [planStepId], references: [id], onDelete: SetNull)
+  conflicts Conflict[]
+
+  @@index([sessionId, status])
+}
+
+model Approval {
+  id           String         @id @default(uuid())
+  sessionId    String
+  kind         ApprovalKind
+  title        String         @db.VarChar(200)
+  details      Json?
+  planStepId   String?
+  status       ApprovalStatus @default(PENDING)
+  requestedAt  DateTime       @default(now())
+  resolvedById String?
+  resolvedAt   DateTime?
+  note         String?        @db.Text
+
+  session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  planStep   PlanStep? @relation(fields: [planStepId], references: [id], onDelete: SetNull)
+  resolvedBy User?     @relation(fields: [resolvedById], references: [id])
+  decision   Decision?
+
+  @@index([sessionId, status])
+}
+
+/// Open while resolvedAt is null.
+model Conflict {
+  id           String    @id @default(uuid())
+  sessionId    String
+  summary      String    @db.Text
+  planStepId   String?
+  resolution   String?   @db.Text
+  resolvedById String?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+
+  session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  planStep   PlanStep? @relation(fields: [planStepId], references: [id], onDelete: SetNull)
+  resolvedBy User?     @relation(fields: [resolvedById], references: [id])
+  /// The contradicting inputs (implicit many-to-many)
+  messages   Message[]
+  decision   Decision?
+
+  @@index([sessionId, resolvedAt])
+}
+
+/// Pinned session memory. Origin: conflictId set = from a conflict, approvalId set = from an approval, neither = typed by hand.
+/// Raw SQL in the migration:
+/// ALTER TABLE "Decision" ADD CONSTRAINT "decision_single_origin" CHECK (NOT ("conflictId" IS NOT NULL AND "approvalId" IS NOT NULL));
+model Decision {
+  id          String    @id @default(uuid())
+  sessionId   String
+  content     String    @db.Text
+  conflictId  String?   @unique
+  approvalId  String?   @unique
+  createdById String?
+  pinnedAt    DateTime  @default(now())
+  unpinnedAt  DateTime?
+
+  session   Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  conflict  Conflict? @relation(fields: [conflictId], references: [id], onDelete: SetNull)
+  approval  Approval? @relation(fields: [approvalId], references: [id], onDelete: SetNull)
+  createdBy User?     @relation(fields: [createdById], references: [id])
+
+  @@index([sessionId])
+}
+
+model Handoff {
+  id         String   @id @default(uuid())
+  sessionId  String
+  fromUserId String
+  toUserId   String
+  briefing   String   @db.Text
+  note       String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  session  Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  fromUser User    @relation("HandoffFrom", fields: [fromUserId], references: [id])
+  toUser   User    @relation("HandoffTo", fields: [toUserId], references: [id])
+
+  @@index([sessionId])
+}
+
+// ─────────────────────────────── Timeline ───────────────────────────────
+
+/// Append-only log. seq is per-session and gapless, allocated from Session.lastEventSeq.
+model TimelineEvent {
+  id        String    @id @default(uuid())
+  sessionId String
+  seq       Int
+  type      EventType
+  actorType ActorType
+  actorId   String?
+  payload   Json
+  createdAt DateTime  @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  @@unique([sessionId, seq])
+}
+
+// ─────────────────────────────── Research ───────────────────────────────
+
+/// A page the agent used in this session (for citations)
+model Source {
+  id        String   @id @default(uuid())
+  sessionId String
+  url       String   @db.Text
+  title     String?  @db.VarChar(300)
+  fetchedAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, url])
+}
+
+/// Scraper cache, scoped to a workspace so teams never share fetched content. Keyed by sha256(url) within the workspace.
+model PageCache {
+  workspaceId String
+  urlHash     String   @db.VarChar(64)
+  url         String   @db.Text
+  finalUrl    String   @db.Text
+  title       String?  @db.VarChar(300)
+  content     String   @db.Text
+  httpStatus  Int
+  fetchedAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, urlHash])
+}
+
+// ─────────────────────────────── Usage & inbox ───────────────────────────────
+
+model UsageRecord {
+  id           String   @id @default(uuid())
+  sessionId    String
+  provider     String   @db.VarChar(50)
+  model        String   @db.VarChar(100)
+  purpose      String   @db.VarChar(50)
+  inputTokens  Int
+  outputTokens Int
+  createdAt    DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  sessionId String
+  type      NotificationType
+  title     String           @db.VarChar(200)
+  /// Id of the Approval / Message / Conflict / Handoff it points to
+  refId     String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}

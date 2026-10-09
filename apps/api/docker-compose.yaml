@@ -1,0 +1,32 @@
+version: "3.3"
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_DB=${PG_DATABASE_NAME}
+    ports:
+      - "${PORT_DATABASE}:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+  api:
+    build:
+      context: .
+    container_name: nest-bp
+    image: nest-bp
+    env_file:
+      - .env
+    ports:
+      - ${PORT}:${PORT}
+    environment:
+      - DATABASE_URL=postgresql://${PG_USER}:${PG_PASSWORD}@db:5432/${PG_DATABASE_NAME}?schema=public
+    depends_on:
+      - db
+    volumes:
+      - ".:/src/"
+      - "./node_modules:/src/node_modules/"
+volumes:
+  db:
+    driver: local

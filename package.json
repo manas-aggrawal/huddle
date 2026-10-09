@@ -1,0 +1,27 @@
+{
+	"name": "huddle",
+	"private": true,
+	"description": "Multiplayer AI agents: a team and an agent research and write a doc together, live.",
+	"workspaces": [
+		"packages/*",
+		"apps/*"
+	],
+	"engines": {
+		"node": ">=22.13.0"
+	},
+	"scripts": {
+		"dev": "npm run build -w @huddle/shared && concurrently -n shared,api,web -c gray,blue,green \"npm:dev:shared\" \"npm:dev:api\" \"npm:dev:web\"",
+		"dev:shared": "npm run dev -w @huddle/shared",
+		"dev:api": "npm run start:dev -w @huddle/api",
+		"dev:web": "npm run dev -w @huddle/web",
+		"build": "npm run build -w @huddle/shared && npm run build -w @huddle/api && npm run build -w @huddle/web",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"check": "biome check --write .",
+		"test:e2e": "npm run test:e2e -w @huddle/api"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.5",
+		"concurrently": "^9.2.1"
+	}
+}
