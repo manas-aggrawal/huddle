@@ -1,55 +1,32 @@
+// Local development seed. Idempotent: safe to run more than once.
+// Demo users and sessions arrive with the full schema in #4.
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
 	console.log('Seeding the database...');
-	await prisma.user.create({
-		data: {
+	// Meets the API's password rules, so you can log in with it.
+	const password = await bcrypt.hash('Admin@1234', 10);
+	await prisma.user.upsert({
+		where: { username: 'admin' },
+		update: {},
+		create: {
 			username: 'admin',
-			password: '$2a$12$y8zMDrKyUO.HttlUxsSNjeoPh.1a2I/skagtn7dbdEjAd9UF1zIqi', // admin
+			email: 'admin@huddle.local',
+			firstname: 'Huddle',
+			lastname: 'Admin',
+			password,
+			role: 'ADMIN',
 		},
 	});
-	await prisma.crudSample.createMany({
-		data: [
-			{
-				testField1: 'testField1',
-				testField2: 0,
-				testField3: false,
-			},
-			{
-				testField1: 'testField2',
-				testField2: 0,
-				testField3: false,
-			},
-			{
-				testField1: 'testField3',
-				testField2: 0,
-				testField3: false,
-			},
-			{
-				testField1: 'testField4',
-				testField2: 0,
-				testField3: false,
-			},
-			{
-				testField1: 'testField5',
-				testField2: 0,
-				testField3: false,
-			},
-		],
-	});
-	console.log('Seed successfuly completed.');
+	console.log('Seeded admin user (admin / Admin@1234)');
 }
+
 main()
-	.then(async () => {
-		await prisma.$disconnect();
-	})
-	.catch(async (e) => {
-		console.log(e);
-		console.error(
-			'Seed failed. Make sure theres nothing in the database before running the script.',
-		);
-		await prisma.$disconnect();
+	.catch((e) => {
+		console.error(e);
 		process.exit(1);
-	});
+	})
+	.finally(() => prisma.$disconnect());

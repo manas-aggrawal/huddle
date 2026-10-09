@@ -1,0 +1,15 @@
+# Build context is the repo root (see apps/api/Dockerfile).
+**/node_modules
+**/dist
+**/logs
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+.git
+docs
+# The web app is not part of the API image; only its package.json is needed
+# so npm ci can validate the workspace lockfile.
+apps/web/*
+!apps/web/package.json

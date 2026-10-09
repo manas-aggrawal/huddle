@@ -51,18 +51,18 @@ erDiagram
     uuid id PK
     string title
     text goal
-    enum status "PLANNING RUNNING WAITING PAUSED DONE"
-    enum agentState "IDLE THINKING RESEARCHING WRITING"
+    string status "PLANNING RUNNING WAITING PAUSED DONE"
+    string agentState "IDLE THINKING RESEARCHING WRITING"
     string modelProvider
     string modelId
-    enum effort
+    string effort
     int tokenBudget "optional cap"
     int tokensUsed
     int lastEventSeq
   }
   SessionMember {
     uuid id PK
-    enum role "OWNER EDITOR VIEWER"
+    string role "OWNER EDITOR VIEWER"
     bool canApprove "EDITOR only"
     int lastSeenSeq
   }
@@ -70,28 +70,28 @@ erDiagram
     uuid id PK
     int position
     string title
-    enum status
+    string status
     string sectionId "heading node in Yjs doc"
     bool requiresApproval
   }
   Message {
     uuid id PK
-    enum mode "SUGGEST INTERRUPT ASK COMMENT"
+    string mode "SUGGEST INTERRUPT ASK COMMENT"
     text content
     json anchor
-    enum status "QUEUED ACKNOWLEDGED APPLIED DECLINED ANSWERED"
+    string status "QUEUED ACKNOWLEDGED APPLIED DECLINED ANSWERED"
     text response
   }
   Approval {
     uuid id PK
-    enum kind "OUTLINE REWRITE_HUMAN_TEXT MARK_FINAL BUDGET"
-    enum status "PENDING APPROVED REJECTED"
+    string kind "OUTLINE REWRITE_HUMAN_TEXT MARK_FINAL BUDGET"
+    string status "PENDING APPROVED REJECTED"
   }
   TimelineEvent {
     uuid id PK
     int seq "unique per session"
-    enum type
-    enum actorType "USER AGENT SYSTEM"
+    string type
+    string actorType "USER AGENT SYSTEM"
     json payload
   }
 ```
@@ -116,3 +116,4 @@ erDiagram
     - `Role` (app-wide): ADMIN operates Huddle itself, and STANDARD is everyone else. Kept because the boilerplate's guard uses it.
     - `WorkspaceRole`: ADMIN manages members, the token pool, billing and deleting the workspace. MEMBER creates sessions and uses the pool. Unused in the MVP.
 12. **Avatars are computed, not stored.** Initials come from the user's first and last name. The color comes from a hash of the user id.
+13. **No Postgres enums.** Columns with a fixed set of values (roles, statuses, kinds, event types) are plain `varchar` strings. The allowed values are constants in `@huddle/shared`, and the API validates every write against them with zod. Adding, renaming or removing a value is a code change, never a migration. The trade-off is that the database itself won't reject a bad value, so all writes go through the validated API layer.

@@ -1,13 +1,16 @@
 import {
+	ConflictException,
 	Injectable,
 	Logger,
 	NotFoundException,
 	UnauthorizedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '@src/prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
-import { ChangePasswordDto, UpdateUserDto } from './dto/user.request';
+import { UpdateUserDto } from './dto/user.request';
 import { UserProfileDto, UserResponseDto } from './dto/user.response';
+import { toUserDto } from './user.mapper';
 
 @Injectable()
 export class UserService {
@@ -26,7 +29,7 @@ export class UserService {
 	 * @param firstname - User's first name
 	 * @param lastname - User's last name
 	 * @returns The created user record (without tokens — caller adds those)
-	 * @throws Error - Propagates Prisma errors (e.g. unique constraint on username/email)
+	 * @throws ConflictException - If the username or email is already taken
 	 */
 	async register(
 		username: string,
@@ -45,14 +48,16 @@ export class UserService {
 					lastname,
 				},
 			});
-			return {
-				...user,
-				createdAt: user.createdAt.toISOString(),
-				updatedAt: user.updatedAt.toISOString(),
-			};
+			return toUserDto(user);
 		} catch (error) {
+			if (
+				error instanceof Prisma.PrismaClientKnownRequestError &&
+				error.code === 'P2002'
+			) {
+				throw new ConflictException('Username or email is already taken');
+			}
 			this.logger.error(error);
-			throw new Error(error);
+			throw error;
 		}
 	}
 
@@ -70,11 +75,7 @@ export class UserService {
 			omit: { password: true },
 		});
 		if (!user) throw new NotFoundException('User not found');
-		return {
-			...user,
-			createdAt: user.createdAt.toISOString(),
-			updatedAt: user.updatedAt.toISOString(),
-		};
+		return toUserDto(user);
 	}
 
 	/**
@@ -92,11 +93,7 @@ export class UserService {
 			data,
 			omit: { password: true },
 		});
-		return {
-			...user,
-			createdAt: user.createdAt.toISOString(),
-			updatedAt: user.updatedAt.toISOString(),
-		};
+		return toUserDto(user);
 	}
 
 	/**
@@ -171,11 +168,7 @@ export class UserService {
 		const users = await this.prisma.user.findMany({
 			omit: { password: true },
 		});
-		return users.map((user) => ({
-			...user,
-			createdAt: user.createdAt.toISOString(),
-			updatedAt: user.updatedAt.toISOString(),
-		}));
+		return users.map(toUserDto);
 	}
 
 	/**
@@ -192,10 +185,6 @@ export class UserService {
 			omit: { password: true },
 		});
 		if (!user) throw new NotFoundException('User not found');
-		return {
-			...user,
-			createdAt: user.createdAt.toISOString(),
-			updatedAt: user.updatedAt.toISOString(),
-		};
+		return toUserDto(user);
 	}
 }

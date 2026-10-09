@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client';
+import { Role } from '@src/enum/role';
 
 export interface DefaultPayload {
 	id: string;

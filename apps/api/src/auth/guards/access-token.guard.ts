@@ -1,7 +1,7 @@
-import { Role } from '.prisma/client/client';
 import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
+import { Role } from '@src/enum/role';
 import { Observable } from 'rxjs';
 import { IS_PUBLIC } from '../decorators/is-public';
 import { ROLE } from '../decorators/roles';

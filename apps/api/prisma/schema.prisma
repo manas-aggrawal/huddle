@@ -1,9 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Huddle database schema. Full target design: docs/schema.prisma (lands in #4).
+//
+// Convention: no Postgres enums. Columns that hold a fixed set of values are
+// plain strings; the allowed values live in @huddle/shared and are validated
+// with zod at the API boundary, so changing them never needs a migration.
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-arm64-openssl-3.0.x", "darwin-arm64"]
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -11,30 +14,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  STANDARD
-  ADMIN
-}
-
-// Test model user for login, must delete this model before start developing.
 model User {
   id        String   @id @default(uuid())
-  username  String   @unique() @db.VarChar(50)
+  username  String   @unique @db.VarChar(50)
   firstname String   @db.VarChar(50)
   lastname  String   @db.VarChar(50)
-  email     String   @unique() @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
   password  String   @db.VarChar(255)
-  role      Role     @default(STANDARD)
+  /// AppRole from @huddle/shared: ADMIN | STANDARD
+  role      String   @default("STANDARD") @db.VarChar(20)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
   @@index([username])
-}
-
-model CrudSample {
-  id         String  @id @default(uuid())
-  testField1 String
-  testField2 Int
-  testField3 Boolean
 }

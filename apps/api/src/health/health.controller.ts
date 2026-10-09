@@ -1,10 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import {
-	HealthCheck,
-	HealthCheckService,
-	HttpHealthIndicator,
-} from '@nestjs/terminus';
+import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
 import { IsPublic } from '@src/auth/decorators/is-public';
 import { PrismaHealthIndicator } from '@src/prisma/health/prisma.health';
@@ -13,7 +9,6 @@ import { PrismaHealthIndicator } from '@src/prisma/health/prisma.health';
 export class HealthController {
 	constructor(
 		private health: HealthCheckService,
-		private http: HttpHealthIndicator,
 		private db: PrismaHealthIndicator,
 	) {}
 
@@ -24,7 +19,6 @@ export class HealthController {
 	@HealthCheck()
 	async check() {
 		const healthCheck = await this.health.check([
-			() => this.http.pingCheck('http', 'https://docs.nestjs.com'),
 			() => this.db.isHealthy('db'),
 		]);
 		return {

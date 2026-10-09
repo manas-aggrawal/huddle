@@ -18,7 +18,9 @@ export class ForgotPasswordTokenStrategy extends PassportStrategy(
 	async validate(payload: UserPayload): Promise<UserFromJwt> {
 		return {
 			id: payload.id,
+			email: payload.email,
 			username: payload.username,
+			role: payload.role,
 		};
 	}
 }

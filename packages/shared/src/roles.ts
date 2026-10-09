@@ -1,4 +1,15 @@
-// Mirrors the SessionRole enum in apps/api/prisma/schema.prisma.
+// Allowed values live here, not in the database: role columns are plain strings,
+// so adding or removing a value is a code change instead of a migration.
+// The API validates every write against these with zod.
+
+/** App-wide role (User.role). ADMIN operates Huddle itself; STANDARD is everyone else. */
+export const AppRole = {
+	ADMIN: 'ADMIN',
+	STANDARD: 'STANDARD',
+} as const;
+export type AppRole = (typeof AppRole)[keyof typeof AppRole];
+
+/** Role inside one session (SessionMember.role). */
 export const SessionRole = {
 	OWNER: 'OWNER',
 	EDITOR: 'EDITOR',

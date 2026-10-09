@@ -3,7 +3,7 @@
 Each `## Txx` block below becomes one GitHub issue. Each `Labels:` line becomes issue labels, and each `Milestone:` line becomes a milestone.
 
 **Testing convention:**
-- **Backend:** automated e2e tests with Jest + Supertest + socket.io-client, run against a dedicated test Postgres. The LLM is always mocked in tests, so runs are deterministic and cost nothing.
+- **Backend:** automated e2e tests with Vitest + Supertest + socket.io-client, run against a dedicated test Postgres. (Vitest, not Jest: Jest can't load the ESM-only AI SDK.) The LLM is always mocked in tests, so runs are deterministic and cost nothing.
 - **Frontend:** manual test scenarios, checked off in the issue before closing.
 - A ticket is done only when its listed e2e tests pass in `npm run test:e2e` or its manual checklist is fully ticked.
 
@@ -17,7 +17,7 @@ Milestone: Day 1
 Create the Huddle monorepo with npm workspaces:
 - `apps/api` is a copy of `manas-aggrawal/nestjs-boilerplate` with fresh git history.
 - `apps/web` is React + Vite + TypeScript.
-- `packages/shared` holds types used by both apps: socket event names and payloads, enums mirrored from Prisma, and role/permission helpers.
+- `packages/shared` holds types used by both apps: socket event names and payloads, the allowed values for every string column (roles, statuses, kinds), and role/permission helpers.
 - Root scripts run either app or both. Biome is configured at the root and applies to all packages.
 
 ### Tasks
@@ -77,8 +77,10 @@ Milestone: Day 1
 ### Description
 Build a reliable e2e test setup that every backend ticket will use.
 
+Already in place from #2: Vitest + SWC (`vitest.e2e.config.ts`), `createTestApp()` (boots AppModule through the same `configureApp()` as `main.ts`), and an automatic `<db>_test` database URL in `test/setup-env.ts`.
+
 ### Tasks
-- [ ] A separate test database (`huddle_test`) in docker-compose, used through `.env.test`
+- [ ] Create and migrate the `huddle_test` database automatically before the suite (global setup), so a fresh clone needs no manual step
 - [ ] Global setup: run `prisma migrate reset --force --skip-seed` once. Per test file, truncate all tables.
 - [ ] Test helpers:
   - `createApp()`: boots a Nest test app on a random port
@@ -86,7 +88,7 @@ Build a reliable e2e test setup that every backend ticket will use.
   - `authed(token)`: a Supertest agent with the auth header set
   - `connectSocket(token, sessionId)`: a socket.io-client connection
   - `connectDoc(token, sessionId)`: a Hocuspocus provider plus a Y.Doc
-- [ ] **Mock LLM:** the provider layer (T12) accepts an injected model, and tests use the AI SDK's `MockLanguageModel` with scripted responses and tool calls
+- [ ] **Mock LLM:** the provider layer (T12) accepts an injected model, and tests use the AI SDK's `MockLanguageModelV3` (from `ai/test`) with scripted responses and tool calls
 - [ ] **Fixture web server:** a local HTTP server that serves canned HTML pages and a fake SearXNG JSON endpoint, so scraper and search tests never touch the internet
 - [ ] `waitForEvent(socket, type, predicate)` helper with a timeout
 - [ ] `npm run test:e2e` at the root runs the API e2e suite with `--runInBand`
@@ -109,7 +111,8 @@ Milestone: Day 1
 Move `docs/schema.prisma` into `apps/api/prisma/schema.prisma` and create the `init` migration. Then add raw SQL for the constraints Prisma can't express, a timeline helper, and a seed for local development.
 
 ### Tasks
-- [ ] Copy the schema in and run `prisma migrate dev --name init`
+- [ ] Copy the schema in and create a migration (`prisma migrate dev --name huddle_schema`)
+- [ ] Add a constant for every string value set to `@huddle/shared` (`SessionStatus`, `AgentState`, `Effort`, `StepStatus`, `MessageMode`, `MessageStatus`, `ApprovalKind`, `ApprovalStatus`, `ActorType`, `EventType`, `NotificationType`, `WorkspaceRole`), matching the `///` comments in the schema. There are no Postgres enums (see DB_DESIGN #13).
 - [ ] In the migration SQL, add the constraints Prisma can't express (the exact SQL is in the schema comments):
   - partial unique index `one_owner_per_session` on `SessionMember(sessionId) WHERE role = 'OWNER'`
   - check `can_approve_only_editors`: `canApprove` can only be true when the role is EDITOR
@@ -120,6 +123,7 @@ Move `docs/schema.prisma` into `apps/api/prisma/schema.prisma` and create the `i
 
 ### Test scenarios
 - **e2e:** registering creates the user, a workspace, and a workspace membership
+- **e2e:** an API write with a value outside a shared constant (for example `status: 'BOGUS'`) is rejected with 400 by zod
 - **e2e:** inserting a second OWNER for the same session fails with a unique-constraint error
 - **e2e:** setting `canApprove = true` on a VIEWER or OWNER membership fails the check constraint
 - **e2e:** a Decision with both `conflictId` and `approvalId` set fails the check constraint
@@ -372,7 +376,7 @@ One module that wraps the Vercel AI SDK, so the rest of the code never talks to 
   2. Refuse when the workspace pool is used up (`tokensUsedThisPeriod >= tokenAllowance`): throw `PoolExhaustedError`.
   3. Refuse when the session has a cap and has reached it (`tokensUsed >= tokenBudget`): throw `BudgetExceededError`.
   4. T28 turns both into pauses in the UI.
-- [ ] `LLM_PROVIDER_OVERRIDE` token for tests, which injects `MockLanguageModel`
+- [ ] `LLM_PROVIDER_OVERRIDE` token for tests, which injects `MockLanguageModelV3`
 - [ ] `GET /models` returns the allowed models, for the picker
 
 ### Test scenarios
