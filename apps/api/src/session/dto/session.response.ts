@@ -1,0 +1,76 @@
+import {
+	AgentState,
+	ApprovalKind,
+	Effort,
+	SessionRole,
+	SessionStatus,
+	StepStatus,
+} from '@huddle/shared';
+import { createZodDto } from 'nestjs-zod';
+import { z } from 'zod';
+
+export const SessionSchema = z.object({
+	id: z.uuid(),
+	workspaceId: z.uuid(),
+	title: z.string(),
+	goal: z.string(),
+	status: z.enum(SessionStatus),
+	agentState: z.enum(AgentState),
+	modelProvider: z.string(),
+	modelId: z.string(),
+	effort: z.enum(Effort),
+	tokenBudget: z.number().int().nullable(),
+	tokensUsed: z.number().int(),
+	lastEventSeq: z
+		.number()
+		.int()
+		.describe('Number of the newest timeline event'),
+	createdAt: z.string(),
+	updatedAt: z.string().describe('Last activity'),
+	completedAt: z.string().nullable(),
+});
+export class SessionDto extends createZodDto(SessionSchema) {}
+
+export const SessionListItemSchema = SessionSchema.extend({
+	myRole: z.enum(SessionRole),
+	memberCount: z.number().int(),
+});
+export class SessionListItemDto extends createZodDto(SessionListItemSchema) {}
+
+const MemberSchema = z.object({
+	userId: z.uuid(),
+	username: z.string(),
+	firstname: z.string(),
+	lastname: z.string(),
+	role: z.enum(SessionRole),
+	canApprove: z.boolean(),
+	joinedAt: z.string(),
+});
+
+const PlanStepSchema = z.object({
+	id: z.uuid(),
+	position: z.number().int(),
+	title: z.string(),
+	description: z.string().nullable(),
+	status: z.enum(StepStatus),
+	sectionId: z.string().nullable(),
+	requiresApproval: z.boolean(),
+});
+
+const PendingApprovalSchema = z.object({
+	id: z.uuid(),
+	kind: z.enum(ApprovalKind),
+	title: z.string(),
+	details: z.unknown().nullable(),
+	planStepId: z.uuid().nullable(),
+	requestedAt: z.string(),
+});
+
+export const SessionDetailSchema = SessionSchema.extend({
+	myRole: z.enum(SessionRole),
+	myCanApprove: z.boolean(),
+	members: z.array(MemberSchema),
+	planSteps: z.array(PlanStepSchema),
+	pendingApprovals: z.array(PendingApprovalSchema),
+});
+export class SessionDetailDto extends createZodDto(SessionDetailSchema) {}
