@@ -1,0 +1,121 @@
+// Allowed values for every string column in the database (see the `///` comments
+// in apps/api/prisma/schema.prisma). There are no Postgres enums: these constants
+// are the single source of truth, the API validates writes with `z.enum(X)`, and
+// the web app uses them for labels and logic. Roles live in roles.ts.
+
+/** Values of a constant object, as a union type: ValueOf<typeof SessionStatus>. */
+type ValueOf<T> = T[keyof T];
+
+export const WorkspaceRole = {
+	ADMIN: 'ADMIN',
+	MEMBER: 'MEMBER',
+} as const;
+export type WorkspaceRole = ValueOf<typeof WorkspaceRole>;
+
+export const SessionStatus = {
+	PLANNING: 'PLANNING',
+	RUNNING: 'RUNNING',
+	/** An approval is pending. Always changed in the same transaction as that approval. */
+	WAITING: 'WAITING',
+	PAUSED: 'PAUSED',
+	DONE: 'DONE',
+} as const;
+export type SessionStatus = ValueOf<typeof SessionStatus>;
+
+export const AgentState = {
+	IDLE: 'IDLE',
+	THINKING: 'THINKING',
+	RESEARCHING: 'RESEARCHING',
+	WRITING: 'WRITING',
+} as const;
+export type AgentState = ValueOf<typeof AgentState>;
+
+export const Effort = {
+	LOW: 'LOW',
+	MEDIUM: 'MEDIUM',
+	HIGH: 'HIGH',
+} as const;
+export type Effort = ValueOf<typeof Effort>;
+
+export const StepStatus = {
+	PENDING: 'PENDING',
+	IN_PROGRESS: 'IN_PROGRESS',
+	DONE: 'DONE',
+	SKIPPED: 'SKIPPED',
+	BLOCKED: 'BLOCKED',
+} as const;
+export type StepStatus = ValueOf<typeof StepStatus>;
+
+export const MessageMode = {
+	SUGGEST: 'SUGGEST',
+	INTERRUPT: 'INTERRUPT',
+	ASK: 'ASK',
+	COMMENT: 'COMMENT',
+} as const;
+export type MessageMode = ValueOf<typeof MessageMode>;
+
+export const MessageStatus = {
+	QUEUED: 'QUEUED',
+	ACKNOWLEDGED: 'ACKNOWLEDGED',
+	APPLIED: 'APPLIED',
+	DECLINED: 'DECLINED',
+	ANSWERED: 'ANSWERED',
+} as const;
+export type MessageStatus = ValueOf<typeof MessageStatus>;
+
+export const ApprovalKind = {
+	OUTLINE: 'OUTLINE',
+	REWRITE_HUMAN_TEXT: 'REWRITE_HUMAN_TEXT',
+	MARK_FINAL: 'MARK_FINAL',
+	BUDGET: 'BUDGET',
+	CUSTOM: 'CUSTOM',
+} as const;
+export type ApprovalKind = ValueOf<typeof ApprovalKind>;
+
+export const ApprovalStatus = {
+	PENDING: 'PENDING',
+	APPROVED: 'APPROVED',
+	REJECTED: 'REJECTED',
+	CANCELLED: 'CANCELLED',
+} as const;
+export type ApprovalStatus = ValueOf<typeof ApprovalStatus>;
+
+export const ActorType = {
+	USER: 'USER',
+	AGENT: 'AGENT',
+	SYSTEM: 'SYSTEM',
+} as const;
+export type ActorType = ValueOf<typeof ActorType>;
+
+export const EventType = {
+	SESSION_CREATED: 'SESSION_CREATED',
+	STATUS_CHANGED: 'STATUS_CHANGED',
+	MEMBER_JOINED: 'MEMBER_JOINED',
+	ROLE_CHANGED: 'ROLE_CHANGED',
+	HUMAN_MESSAGE: 'HUMAN_MESSAGE',
+	AGENT_MESSAGE: 'AGENT_MESSAGE',
+	AGENT_ACK: 'AGENT_ACK',
+	STEP_STARTED: 'STEP_STARTED',
+	STEP_COMPLETED: 'STEP_COMPLETED',
+	PLAN_UPDATED: 'PLAN_UPDATED',
+	TOOL_CALL: 'TOOL_CALL',
+	APPROVAL_REQUESTED: 'APPROVAL_REQUESTED',
+	APPROVAL_RESOLVED: 'APPROVAL_RESOLVED',
+	CONFLICT_RAISED: 'CONFLICT_RAISED',
+	CONFLICT_RESOLVED: 'CONFLICT_RESOLVED',
+	DECISION_PINNED: 'DECISION_PINNED',
+	HANDOFF: 'HANDOFF',
+	MODEL_CHANGED: 'MODEL_CHANGED',
+	BUDGET_WARNING: 'BUDGET_WARNING',
+	DOC_EDITED: 'DOC_EDITED',
+} as const;
+export type EventType = ValueOf<typeof EventType>;
+
+export const NotificationType = {
+	APPROVAL_REQUESTED: 'APPROVAL_REQUESTED',
+	QUESTION_FOR_YOU: 'QUESTION_FOR_YOU',
+	MENTION: 'MENTION',
+	CONFLICT_RAISED: 'CONFLICT_RAISED',
+	HANDOFF_RECEIVED: 'HANDOFF_RECEIVED',
+} as const;
+export type NotificationType = ValueOf<typeof NotificationType>;

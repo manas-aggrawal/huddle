@@ -7,7 +7,7 @@ import { THROTTLE_LIMIT, THROTTLE_TTL } from './configs/env-vars';
 import { HealthModule } from './health/health.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { PrismaModule } from './prisma/prisma.module';
-import { PrismaService } from './prisma/prisma.service';
+import { TimelineModule } from './timeline/timeline.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -27,9 +27,9 @@ import { UserModule } from './user/user.module';
 		PrismaModule,
 		HealthModule,
 		UserModule,
+		TimelineModule,
 	],
 	providers: [
-		PrismaService,
 		{
 			// ThrottlerGuard must come before AccessTokenGuard so rate limits are
 			// enforced before any auth work happens.

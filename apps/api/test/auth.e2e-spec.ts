@@ -2,6 +2,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp } from './utils/create-app';
+import { testPrisma } from './utils/db';
 
 const PASSWORD = 'Str0ng!pass';
 const run = Date.now().toString(36);
@@ -51,6 +52,20 @@ describe('Auth flows', () => {
 			role: 'STANDARD',
 		});
 		expect(me.body.password).toBeUndefined();
+	});
+
+	it('register gives the user a personal workspace, with them as its admin', async () => {
+		const reg = await http
+			.post('/users/register')
+			.send(newUser('w'))
+			.expect(200);
+		const memberships = await testPrisma.workspaceMember.findMany({
+			where: { userId: reg.body.id },
+			include: { workspace: true },
+		});
+		expect(memberships).toHaveLength(1);
+		expect(memberships[0].role).toBe('ADMIN');
+		expect(memberships[0].workspace.name).toBe("Test's workspace");
 	});
 
 	it('GET /users/me without a token returns 401', async () => {

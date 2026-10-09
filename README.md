@@ -3,7 +3,7 @@
 Multiplayer AI agents: a team and an AI agent research and write a document together, live. Anyone can drop in to watch, steer, or take over.
 
 - Product concept: [`CONCEPT.md`](./CONCEPT.md)
-- Data model: [`docs/DB_DESIGN.md`](./docs/DB_DESIGN.md), [`docs/DB_UML_DESCRIPTION.md`](./docs/DB_UML_DESCRIPTION.md), [`docs/schema.prisma`](./docs/schema.prisma)
+- Data model: [`docs/DB_DESIGN.md`](./docs/DB_DESIGN.md), [`docs/DB_UML_DESCRIPTION.md`](./docs/DB_UML_DESCRIPTION.md), [`apps/api/prisma/schema.prisma`](./apps/api/prisma/schema.prisma)
 - Work tracking: [GitHub issues](https://github.com/manas-aggrawal/huddle/issues) (source: [`docs/TICKETS.md`](./docs/TICKETS.md))
 
 ## Layout
