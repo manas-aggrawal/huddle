@@ -1,6 +1,6 @@
 # Huddle: Database Design
 
-PostgreSQL + Prisma. The full schema (validated with `prisma validate`) is in [`schema.prisma`](./schema.prisma). It moves to `apps/api/prisma/schema.prisma` when we scaffold.
+PostgreSQL + Prisma. The schema is [`apps/api/prisma/schema.prisma`](../apps/api/prisma/schema.prisma), which is the only copy. The allowed values for its string columns are in [`packages/shared/src/values.ts`](../packages/shared/src/values.ts) and [`roles.ts`](../packages/shared/src/roles.ts).
 
 ## What lives where
 

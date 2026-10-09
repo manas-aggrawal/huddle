@@ -1,3 +1,4 @@
+import { WorkspaceRole } from '@huddle/shared';
 import {
 	ConflictException,
 	Injectable,
@@ -20,7 +21,10 @@ export class UserService {
 	) {}
 
 	/**
-	 * Registers a new user after hashing their password.
+	 * Registers a new user after hashing their password, and gives them a
+	 * personal workspace (where their sessions and token pool live) with them as
+	 * its admin. User, workspace and membership are one nested write, which
+	 * Prisma runs as a single transaction: either all three exist or none do.
 	 * Called by the register endpoint which then issues tokens via AuthService.
 	 *
 	 * @param username - Unique username (lowercase, alphanumeric)
@@ -46,6 +50,12 @@ export class UserService {
 					password: await bcrypt.hash(password, 10),
 					firstname,
 					lastname,
+					workspaceMemberships: {
+						create: {
+							role: WorkspaceRole.ADMIN,
+							workspace: { create: { name: `${firstname}'s workspace` } },
+						},
+					},
 				},
 			});
 			return toUserDto(user);

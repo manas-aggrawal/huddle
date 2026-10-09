@@ -103,12 +103,12 @@ New tests can be written as `const { app, users } = await setup()` in fewer than
 
 ---
 
-## T04 · Implement the Prisma schema, migration and seed
+## T04 · Implement the Prisma schema and migration
 Labels: area:db, area:api, type:feature
 Milestone: Day 1
 
 ### Description
-Move `docs/schema.prisma` into `apps/api/prisma/schema.prisma` and create the `init` migration. Then add raw SQL for the constraints Prisma can't express, a timeline helper, and a seed for local development.
+Move `docs/schema.prisma` into `apps/api/prisma/schema.prisma` (it becomes the only copy) and create the migration. Then add raw SQL for the constraints Prisma can't express, the shared value sets, workspace-on-signup, and the timeline helper. A demo-data seed is not needed here; #32 has one for the final demo.
 
 ### Tasks
 - [ ] Copy the schema in and create a migration (`prisma migrate dev --name huddle_schema`)
@@ -119,17 +119,15 @@ Move `docs/schema.prisma` into `apps/api/prisma/schema.prisma` and create the `i
   - check `decision_single_origin`: a Decision can't have both `conflictId` and `approvalId`
 - [ ] On user register, create a personal `Workspace` plus a `WorkspaceMember(ADMIN)`, inside the same transaction as the user insert
 - [ ] Add a `TimelineService.append(tx, sessionId, event)` helper that allocates `seq` by running `UPDATE "Session" SET "lastEventSeq" = "lastEventSeq" + 1 ... RETURNING`
-- [ ] Seed script: 4 demo users (Maya, Leo, Raj, Dana), one demo session with each role, and a few plan steps and events
 
 ### Test scenarios
 - **e2e:** registering creates the user, a workspace, and a workspace membership
-- **e2e:** an API write with a value outside a shared constant (for example `status: 'BOGUS'`) is rejected with 400 by zod
 - **e2e:** inserting a second OWNER for the same session fails with a unique-constraint error
 - **e2e:** setting `canApprove = true` on a VIEWER or OWNER membership fails the check constraint
 - **e2e:** a Decision with both `conflictId` and `approvalId` set fails the check constraint
 - **e2e:** 50 concurrent `append()` calls on one session produce seq values 1..50 with no gaps or duplicates
 - **e2e:** deleting a session cascades to its members, events, messages and plan steps
-- **Manual:** `npm run seed` then `prisma studio` shows the demo data
+- **e2e:** a timeline append inside a transaction that rolls back leaves no gap in the numbering
 
 ### Done when
 The migration applies cleanly from an empty database, and every constraint test passes.
@@ -146,7 +144,7 @@ REST endpoints for sessions:
 - **Listing** returns sessions the user is a member of, grouped by status.
 
 ### Tasks
-- [ ] `POST /sessions` with `{ workspaceId, title, goal, modelProvider?, modelId?, tokenBudget? }`. The caller must be a member of the workspace. Validate with zod. Default the model from config. `tokenBudget` is an optional per-session cap.
+- [ ] `POST /sessions` with `{ workspaceId, title, goal, modelProvider?, modelId?, effort?, tokenBudget? }`. The caller must be a member of the workspace. Validate with zod. Default the model from config. `tokenBudget` is an optional per-session cap.
 - [ ] `GET /sessions` returns my sessions with my role, member count and status. Supports filtering by `status`.
 - [ ] `GET /sessions/:id` returns the session, members (with role), plan steps and pending approvals. Callable only by members.
 - [ ] `PATCH /sessions/:id/status` with `pause | resume | end`, Owner only. Appends a `STATUS_CHANGED` event.
@@ -160,6 +158,7 @@ REST endpoints for sessions:
 - **e2e:** a non-member calling `GET /sessions/:id` gets 404 (not 403, so the session's existence isn't revealed)
 - **e2e:** an Editor calling `PATCH status` gets 403. The Owner calling it succeeds and an event is appended.
 - **e2e:** an invalid body (empty goal, or a title over 200 characters) returns 400 with zod error details
+- **e2e:** values outside a shared constant are rejected with 400 by zod built from `@huddle/shared` (`z.enum(SessionStatus)` etc.): `GET /sessions?status=BOGUS`, and `POST /sessions` with `effort: 'EXTREME'`. There are no Postgres enums, so this API check is what keeps bad values out (moved here from #4).
 
 ### Done when
 The role guard is reusable, and every scenario passes.
