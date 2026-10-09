@@ -35,6 +35,32 @@ Run these from the repo root with `-w @huddle/api`, or from this folder.
 | `migrate:new` | Create a migration from schema changes (`prisma migrate dev`) |
 | `seed` | Create a local admin user (`admin` / `Admin@1234`) |
 
+## Testing
+
+e2e tests live in `test/*.e2e-spec.ts` and run with `npm run test:e2e`.
+- **Database:** a separate `<db>_test` database, created and migrated automatically on the first run. Every test file starts with empty tables.
+- **Order:** files run one at a time.
+- **Rate limits:** off in tests (`NODE_ENV=test`).
+
+```ts
+const ctx = await setupE2E({ users: ['maya', 'leo'] });   // running app + logged-in users
+await ctx.as('maya').post('/sessions').send({ ... }).expect(200);
+const socket = await connectSocket(ctx.app, ctx.users.leo.token);
+const event = await waitForEvent(socket, 'timeline:event', (e) => e.seq === 2);
+await ctx.close();
+```
+
+| Helper (`test/utils/`) | What it does |
+|---|---|
+| `setupE2E({ users, providers, overrides })` | Boots AppModule through `configureApp()` on a random port, and registers users |
+| `registerAndLogin`, `authed` | Create a user through the API. Supertest calls with their Bearer token. |
+| `connectSocket`, `waitForEvent`, `expectNoEvent` | Real Socket.IO clients. Waits fail on timeout instead of hanging. |
+| `scriptedModel([...steps])` | Deterministic LLM: scripted text, streamed chunks, tool calls, errors, slow streams. Records every prompt. |
+| `startFixtureServer()` | Local web server standing in for the internet: SearXNG-shaped `/search`, an article page, `robots.txt`, custom routes, hit counts |
+| `testPrisma`, `resetDatabase` | Direct database access for assertions |
+
+Inject the mock model with `overrides: [{ provide: <LLM token>, useValue: mock.model }]` (the token arrives in #12). `npm run typecheck` also type-checks the tests.
+
 ## Auth endpoints
 
 | Method | Path | Notes |
