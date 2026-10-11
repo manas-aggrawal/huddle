@@ -23,7 +23,7 @@ export function AppHeader() {
 	const { user, logout } = useAuth();
 	return (
 		<header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur">
-			<div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
+			<div className="flex h-14 items-center justify-between gap-3 px-4">
 				<Logo />
 				<div className="flex items-center gap-1 sm:gap-2">
 					<ThemeToggle />

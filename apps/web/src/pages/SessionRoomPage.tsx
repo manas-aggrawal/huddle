@@ -1,41 +1,25 @@
-import {
-	SessionRole as Role,
-	type SessionRole,
-	type SessionStatus,
-} from '@huddle/shared';
-import { useQuery } from '@tanstack/react-query';
+import { can } from '@huddle/shared';
 import { Link, useParams } from 'react-router';
-import { Avatar, Badge, Card } from '../components/ui';
+import { DocPane } from '../components/room/DocPane';
+import { PlanPane } from '../components/room/PlanPane';
+import { RoomHeader } from '../components/room/RoomHeader';
+import { TimelinePane } from '../components/room/TimelinePane';
 import { useSessionSocket } from '../hooks/useSessionSocket';
-import { ApiError, api, unwrap } from '../lib/api';
-import { ROLE_LABEL, STATUS_LABEL, timeAgo } from '../lib/labels';
-
-const CONNECTION_LABEL = {
-	connecting: { label: 'Connecting…', tone: 'neutral' },
-	live: { label: 'Live', tone: 'ok' },
-	reconnecting: { label: 'Reconnecting…', tone: 'warn' },
-	offline: { label: 'Offline', tone: 'danger' },
-} as const;
+import { ApiError } from '../lib/api';
+import { fullName, useAuth } from '../lib/auth';
+import { asRole, useRefetchOnEvents, useSessionDetail } from '../lib/session';
 
 /**
- * The session room. For now: title, who's online and the live timeline, enough
- * to check realtime and reconnects. The full three-pane room replaces this.
+ * The session room: header, then plan | document | timeline. On narrow
+ * screens the panes stack (plan, document, timeline).
  */
 export function SessionRoomPage() {
 	const { sessionId } = useParams();
-	const session = useQuery({
-		queryKey: ['session', sessionId],
-		queryFn: () =>
-			unwrap(
-				api.GET('/sessions/{id}', {
-					params: { path: { id: sessionId ?? '' } },
-				}),
-			),
-		enabled: Boolean(sessionId),
-		retry: (count, err) =>
-			!(err instanceof ApiError && err.status < 500) && count < 2,
-	});
+	const { user } = useAuth();
+	const session = useSessionDetail(sessionId);
+	// Join the live room only once we know we're a member.
 	const live = useSessionSocket(session.data ? sessionId : undefined);
+	useRefetchOnEvents(sessionId, live.events);
 
 	if (session.isPending) {
 		return (
@@ -74,68 +58,29 @@ export function SessionRoomPage() {
 	}
 
 	const s = session.data;
-	const status = STATUS_LABEL[s.status as SessionStatus];
-	const connection = CONNECTION_LABEL[live.status];
-	const names = new Map(
-		s.members.map((m) => [m.userId, `${m.firstname} ${m.lastname}`]),
-	);
+	const me = { role: asRole(s.myRole), canApprove: s.myCanApprove };
 
 	return (
-		<main className="mx-auto max-w-6xl px-4 py-6">
-			<div className="flex flex-wrap items-start justify-between gap-3">
-				<div className="min-w-0">
-					<div className="flex flex-wrap items-center gap-2">
-						<h1 className="text-xl font-semibold">{s.title}</h1>
-						<Badge tone={status.tone}>{status.label}</Badge>
-						<Badge tone={connection.tone}>{connection.label}</Badge>
-					</div>
-					<p className="mt-1 text-sm text-muted">{s.goal}</p>
-					<p className="mt-1 text-xs text-muted">
-						Your role: {ROLE_LABEL[s.myRole as SessionRole]}
-					</p>
-				</div>
-				<div className="flex items-center -space-x-1.5" aria-label="Online now">
-					{live.presence.map((p) => (
-						<Avatar
-							key={p.userId}
-							userId={p.userId}
-							name={p.name}
-							dashed={p.role === Role.VIEWER}
-							typing={p.typing}
-						/>
-					))}
-				</div>
-			</div>
-
-			<Card className="mt-6 p-4">
-				<h2 className="text-sm font-semibold">Timeline</h2>
-				{live.error && (
-					<p className="mt-2 text-sm text-danger">{live.error.message}</p>
+		// Fills the screen under the app header on wide screens; scrolls as one page when stacked.
+		<main className="flex flex-col lg:h-[calc(100dvh-3.5rem)]">
+			<RoomHeader
+				session={s}
+				presence={live.presence}
+				connection={live.status}
+			/>
+			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
+				<PlanPane steps={s.planSteps} className="max-h-80 lg:max-h-none" />
+				{user && (
+					<DocPane
+						sessionId={s.id}
+						me={{ userId: user.id, name: fullName(user) }}
+						canEdit={can(me, 'editDoc')}
+						onViewing={(viewing) => live.updatePresence({ viewing })}
+						className="min-h-[24rem]"
+					/>
 				)}
-				<ol className="mt-3 flex flex-col gap-2">
-					{live.events.map((e) => {
-						const actor =
-							(e.payload.actor as { name?: string } | undefined)?.name ??
-							(e.actorId ? names.get(e.actorId) : undefined);
-						return (
-							<li key={e.seq} className="flex items-baseline gap-3 text-sm">
-								<span className="w-8 shrink-0 text-right font-mono text-xs text-muted">
-									#{e.seq}
-								</span>
-								<span className="font-medium">
-									{actor ?? (e.actorType === 'AGENT' ? 'Agent' : 'System')}
-								</span>
-								<span className="text-muted">
-									{e.type.toLowerCase().replaceAll('_', ' ')}
-								</span>
-								<span className="ml-auto shrink-0 text-xs text-muted">
-									{timeAgo(e.createdAt)}
-								</span>
-							</li>
-						);
-					})}
-				</ol>
-			</Card>
+				<TimelinePane events={live.events} className="h-[28rem] lg:h-auto" />
+			</div>
 		</main>
 	);
 }
