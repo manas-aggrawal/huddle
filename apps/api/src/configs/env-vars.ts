@@ -18,6 +18,9 @@ export const {
 	// Model a new session uses when the creator doesn't pick one
 	DEFAULT_MODEL_PROVIDER = 'groq',
 	DEFAULT_MODEL_ID = 'llama-3.3-70b-versatile',
+	// Models people can pick, "provider:modelId" comma-separated (the default is always included),
+	// e.g. "groq:llama-3.3-70b-versatile,ollama:qwen2.5:14b"
+	MODELS,
 	// Token lifetimes (vercel/ms format, e.g. "30s", "15m", "1h"). Shorten the access one to test silent refresh.
 	ACCESS_TOKEN_TTL = '1h',
 	REFRESH_TOKEN_TTL = '8h',

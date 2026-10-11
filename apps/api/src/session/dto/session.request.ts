@@ -1,4 +1,4 @@
-import { Effort, SessionStatus } from '@huddle/shared';
+import { Effort, SessionLimits, SessionStatus } from '@huddle/shared';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -12,8 +12,21 @@ const CreateSessionSchema = z.object({
 		.describe(
 			'Workspace to create the session in. Defaults to your personal workspace.',
 		),
-	title: z.string().trim().min(1).max(200),
-	goal: z.string().trim().min(1).max(5000).describe('What the team wants done'),
+	title: z.string().trim().min(1).max(SessionLimits.TITLE_MAX),
+	goal: z
+		.string()
+		.trim()
+		.min(1)
+		.max(SessionLimits.GOAL_MAX)
+		.describe('What the team wants done'),
+	context: z
+		.string()
+		.trim()
+		.max(SessionLimits.CONTEXT_MAX)
+		.optional()
+		.describe(
+			'Background for the agent (pasted text or links). Saved as the first message, a Suggest from the creator.',
+		),
 	modelProvider: z.string().trim().min(1).max(50).optional(),
 	modelId: z.string().trim().min(1).max(100).optional(),
 	effort: z.enum(Effort).optional(),
