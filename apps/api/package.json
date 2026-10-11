@@ -24,7 +24,8 @@
 		"test:watch": "vitest",
 		"test:e2e": "vitest run --config vitest.e2e.config.ts",
 		"postinstall": "prisma generate",
-		"typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json"
+		"typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json",
+		"openapi:export": "nest build && node dist/scripts/export-openapi.js dist/openapi.json"
 	},
 	"dependencies": {
 		"@hocuspocus/extension-database": "^4.7.0",
@@ -70,6 +71,7 @@
 		"@types/node": "^22.13.0",
 		"@types/supertest": "^6.0.3",
 		"@types/ws": "^8.18.2",
+		"openapi-typescript": "^7.13.0",
 		"prisma": "^6.19.0",
 		"socket.io-client": "^4.8.4",
 		"source-map-support": "^0.5.20",

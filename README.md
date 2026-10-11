@@ -51,5 +51,6 @@ npm run dev
 | `npm run lint` | Biome lint across all packages |
 | `npm run check` | Biome format + lint with fixes |
 | `npm run test:e2e` | API end-to-end tests |
+| `npm run gen:api` | Regenerates the web app's API types from the API's OpenAPI document (no server or DB needed). Run after changing an endpoint. |
 
 Run any package script directly with `-w`, for example `npm run migrate:new -w @huddle/api`.

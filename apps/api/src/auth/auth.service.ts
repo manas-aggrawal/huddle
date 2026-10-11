@@ -1,14 +1,17 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
+	ACCESS_TOKEN_TTL,
 	JWT_ACCESS_TOKEN_SECRET,
 	JWT_FORGOT_PASSWORD_SECRET,
 	JWT_REFRESH_TOKEN_SECRET,
+	REFRESH_TOKEN_TTL,
 } from '@src/configs/env-vars';
 import { PrismaService } from '@src/prisma/prisma.service';
 import { toUserDto } from '@src/user/user.mapper';
 import { UserService } from '@src/user/user.service';
 import * as bcrypt from 'bcryptjs';
+import type { StringValue } from 'ms';
 import { DefaultPayload } from './interfaces/payload.interface';
 
 @Injectable()
@@ -43,11 +46,11 @@ export class AuthService {
 	async giveTokens(payload: DefaultPayload) {
 		const [access_token, refresh_token] = await Promise.all([
 			this.jwtService.sign(payload, {
-				expiresIn: '1h',
+				expiresIn: ACCESS_TOKEN_TTL as StringValue,
 				secret: JWT_ACCESS_TOKEN_SECRET,
 			}),
 			this.jwtService.sign(payload, {
-				expiresIn: '8h',
+				expiresIn: REFRESH_TOKEN_TTL as StringValue,
 				secret: JWT_REFRESH_TOKEN_SECRET,
 			}),
 		]);

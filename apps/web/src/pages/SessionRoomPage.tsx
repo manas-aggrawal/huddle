@@ -1,0 +1,86 @@
+import { can } from '@huddle/shared';
+import { Link, useParams } from 'react-router';
+import { DocPane } from '../components/room/DocPane';
+import { PlanPane } from '../components/room/PlanPane';
+import { RoomHeader } from '../components/room/RoomHeader';
+import { TimelinePane } from '../components/room/TimelinePane';
+import { useSessionSocket } from '../hooks/useSessionSocket';
+import { ApiError } from '../lib/api';
+import { fullName, useAuth } from '../lib/auth';
+import { asRole, useRefetchOnEvents, useSessionDetail } from '../lib/session';
+
+/**
+ * The session room: header, then plan | document | timeline. On narrow
+ * screens the panes stack (plan, document, timeline).
+ */
+export function SessionRoomPage() {
+	const { sessionId } = useParams();
+	const { user } = useAuth();
+	const session = useSessionDetail(sessionId);
+	// Join the live room only once we know we're a member.
+	const live = useSessionSocket(session.data ? sessionId : undefined);
+	useRefetchOnEvents(sessionId, live.events);
+
+	if (session.isPending) {
+		return (
+			<p className="mx-auto max-w-6xl px-4 py-8 text-sm text-muted">
+				Loading session…
+			</p>
+		);
+	}
+	if (session.isError || live.removed) {
+		const notFound =
+			session.error instanceof ApiError && session.error.status === 404;
+		return (
+			<main className="mx-auto max-w-xl px-4 py-16 text-center">
+				<h1 className="text-xl font-semibold">
+					{live.removed
+						? "You're no longer in this session"
+						: notFound
+							? 'Session not found'
+							: "Couldn't load this session"}
+				</h1>
+				<p className="mt-2 text-sm text-muted">
+					{live.removed
+						? 'The Owner removed you. Ask them for a new invite if this was a mistake.'
+						: notFound
+							? "It doesn't exist, or you're not a member. Ask the Owner for an invite link."
+							: session.error?.message}
+				</p>
+				<Link
+					to="/"
+					className="mt-6 inline-block text-sm font-medium text-accent hover:underline"
+				>
+					Back to your sessions
+				</Link>
+			</main>
+		);
+	}
+
+	const s = session.data;
+	const me = { role: asRole(s.myRole), canApprove: s.myCanApprove };
+
+	return (
+		// Fills the screen under the app header on wide screens; scrolls as one page when stacked.
+		<main className="flex flex-col lg:h-[calc(100dvh-3.5rem)]">
+			<RoomHeader
+				session={s}
+				presence={live.presence}
+				connection={live.status}
+			/>
+			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
+				<PlanPane steps={s.planSteps} className="max-h-80 lg:max-h-none" />
+				{user && (
+					<DocPane
+						sessionId={s.id}
+						me={{ userId: user.id, name: fullName(user) }}
+						canEdit={can(me, 'editDoc')}
+						onViewing={(viewing) => live.updatePresence({ viewing })}
+						className="min-h-[24rem]"
+					/>
+				)}
+				<TimelinePane events={live.events} className="h-[28rem] lg:h-auto" />
+			</div>
+		</main>
+	);
+}

@@ -1,3 +1,4 @@
+import { INestApplication } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
@@ -32,12 +33,19 @@ export function configureApp(app: NestExpressApplication): void {
 
 	app.useGlobalPipes(new ZodValidationPipe());
 
+	SwaggerModule.setup('/api/docs', app, buildOpenApiDocument(app));
+}
+
+/** The OpenAPI description of the API. Also exported to the web app's typed client (npm run gen:api). */
+export function buildOpenApiDocument(app: INestApplication) {
 	const config = new DocumentBuilder()
 		.setTitle('Huddle API')
 		.setDescription(
 			'Multiplayer AI agents: sessions, roles, timeline, approvals and the agent runner',
 		)
 		.setVersion('0.1.0')
+		// 3.1, because nestjs-zod's down-conversion to 3.0 turns nullable strings into arrays.
+		.setOpenAPIVersion('3.1.0')
 		.addTag('Auth')
 		.addTag('Others')
 		.addBearerAuth(
@@ -53,6 +61,5 @@ export function configureApp(app: NestExpressApplication): void {
 			'forgot-password-token',
 		)
 		.build();
-	const document = SwaggerModule.createDocument(app, config);
-	SwaggerModule.setup('/api/docs', app, cleanupOpenApiDoc(document));
+	return cleanupOpenApiDoc(SwaggerModule.createDocument(app, config));
 }
