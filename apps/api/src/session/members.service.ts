@@ -5,17 +5,13 @@ import {
 	NotFoundException,
 } from '@nestjs/common';
 import { Prisma, SessionMember } from '@prisma/client';
-import { PrismaService } from '@src/prisma/prisma.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import { UpdateMemberDto } from './dto/member.request';
 import { MemberDto } from './dto/session.response';
 
 @Injectable()
 export class MembersService {
-	constructor(
-		private readonly prisma: PrismaService,
-		private readonly timeline: TimelineService,
-	) {}
+	constructor(private readonly timeline: TimelineService) {}
 
 	/**
 	 * Changes a member between Editor and Viewer, and/or switches "allowed to
@@ -27,7 +23,7 @@ export class MembersService {
 		targetUserId: string,
 		dto: UpdateMemberDto,
 	): Promise<MemberDto> {
-		return this.prisma.$transaction(async (tx) => {
+		return this.timeline.transaction(async (tx) => {
 			const target = await this.findTarget(tx, owner.sessionId, targetUserId);
 			if (target.role === SessionRole.OWNER) {
 				throw new BadRequestException(
@@ -69,7 +65,7 @@ export class MembersService {
 
 	/** Removes someone from the session. They lose access immediately. The Owner can't be removed. */
 	async remove(owner: SessionMember, targetUserId: string): Promise<void> {
-		await this.prisma.$transaction(async (tx) => {
+		await this.timeline.transaction(async (tx) => {
 			const target = await this.findTarget(tx, owner.sessionId, targetUserId);
 			if (target.role === SessionRole.OWNER) {
 				throw new BadRequestException(

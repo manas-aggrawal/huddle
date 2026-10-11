@@ -141,7 +141,7 @@ export class InviteService {
 	 */
 	async accept(userId: string, token: string): Promise<AcceptInviteDto> {
 		try {
-			return await this.prisma.$transaction((tx) =>
+			return await this.timeline.transaction((tx) =>
 				this.acceptInTx(tx, userId, token),
 			);
 		} catch (error) {

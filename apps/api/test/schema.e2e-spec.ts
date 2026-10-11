@@ -176,7 +176,7 @@ describe('schema rules and timeline', () => {
 			const s = await newSession();
 			await timeline.record(s.id, event(1));
 			await expect(
-				testPrisma.$transaction(async (tx) => {
+				timeline.transaction(async (tx) => {
 					await timeline.append(tx, s.id, event(2));
 					throw new Error('the change this event describes failed');
 				}),

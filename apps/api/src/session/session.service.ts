@@ -108,7 +108,7 @@ export class SessionService {
 	async create(userId: string, dto: CreateSessionDto): Promise<SessionDto> {
 		const workspaceId = await this.resolveWorkspace(userId, dto.workspaceId);
 
-		const session = await this.prisma.$transaction(async (tx) => {
+		const session = await this.timeline.transaction(async (tx) => {
 			const created = await tx.session.create({
 				data: {
 					workspaceId,
@@ -226,7 +226,7 @@ export class SessionService {
 	): Promise<SessionDto> {
 		const sessionId = membership.sessionId;
 
-		const session = await this.prisma.$transaction(async (tx) => {
+		const session = await this.timeline.transaction(async (tx) => {
 			const current = await tx.session.findUniqueOrThrow({
 				where: { id: sessionId },
 			});
