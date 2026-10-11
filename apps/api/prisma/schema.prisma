@@ -148,8 +148,9 @@ model SessionMember {
 model Invite {
   id          String    @id @default(uuid())
   sessionId   String
+  /// sha256 (hex) of the link token. The raw token is shown once, at creation, and never stored.
   token       String    @unique @db.VarChar(64)
-  /// SessionRole (@huddle/shared): OWNER | EDITOR | VIEWER
+  /// SessionRole (@huddle/shared): EDITOR (invite) | VIEWER (share link)
   role        String    @db.VarChar(20)
   createdById String
   useCount    Int       @default(0)
@@ -311,7 +312,7 @@ model TimelineEvent {
   id        String   @id @default(uuid())
   sessionId String
   seq       Int
-  /// EventType (@huddle/shared): SESSION_CREATED | STATUS_CHANGED | MEMBER_JOINED | ROLE_CHANGED | HUMAN_MESSAGE | AGENT_MESSAGE | AGENT_ACK | STEP_STARTED | STEP_COMPLETED | PLAN_UPDATED | TOOL_CALL | APPROVAL_REQUESTED | APPROVAL_RESOLVED | CONFLICT_RAISED | CONFLICT_RESOLVED | DECISION_PINNED | HANDOFF | MODEL_CHANGED | BUDGET_WARNING | DOC_EDITED
+  /// EventType (@huddle/shared): SESSION_CREATED | STATUS_CHANGED | MEMBER_JOINED | MEMBER_REMOVED | ROLE_CHANGED | HUMAN_MESSAGE | AGENT_MESSAGE | AGENT_ACK | STEP_STARTED | STEP_COMPLETED | PLAN_UPDATED | TOOL_CALL | APPROVAL_REQUESTED | APPROVAL_RESOLVED | CONFLICT_RAISED | CONFLICT_RESOLVED | DECISION_PINNED | HANDOFF | MODEL_CHANGED | BUDGET_WARNING | DOC_EDITED
   type      String   @db.VarChar(22)
   /// ActorType (@huddle/shared): USER | AGENT | SYSTEM
   actorType String   @db.VarChar(20)

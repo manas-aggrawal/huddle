@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { AccessTokenGuard } from './auth/guards/access-token.guard';
 import { THROTTLE_LIMIT, THROTTLE_TTL } from './configs/env-vars';
 import { HealthModule } from './health/health.module';
+import { InviteModule } from './invite/invite.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { PrismaModule } from './prisma/prisma.module';
 import { SessionModule } from './session/session.module';
@@ -30,6 +31,7 @@ import { UserModule } from './user/user.module';
 		UserModule,
 		TimelineModule,
 		SessionModule,
+		InviteModule,
 	],
 	providers: [
 		{

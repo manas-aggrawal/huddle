@@ -55,6 +55,21 @@ export class TimelineService {
 		});
 	}
 
+	/**
+	 * Display details for a person, stored in event payloads (`actor`, `member`)
+	 * so the timeline renders without extra lookups.
+	 */
+	async actorSnapshot(
+		tx: Prisma.TransactionClient,
+		userId: string,
+	): Promise<{ id: string; name: string }> {
+		const user = await tx.user.findUniqueOrThrow({
+			where: { id: userId },
+			select: { id: true, firstname: true, lastname: true },
+		});
+		return { id: user.id, name: `${user.firstname} ${user.lastname}`.trim() };
+	}
+
 	/** Appends an event on its own, when there's no other change to save with it. */
 	record(sessionId: string, event: NewTimelineEvent): Promise<TimelineEvent> {
 		return this.prisma.$transaction((tx) => this.append(tx, sessionId, event));
