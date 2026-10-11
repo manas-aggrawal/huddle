@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { AccessTokenGuard } from './auth/guards/access-token.guard';
+import { CollabModule } from './collab/collab.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL } from './configs/env-vars';
 import { HealthModule } from './health/health.module';
 import { InviteModule } from './invite/invite.module';
@@ -34,6 +35,7 @@ import { UserModule } from './user/user.module';
 		SessionModule,
 		InviteModule,
 		RealtimeModule,
+		CollabModule,
 	],
 	providers: [
 		{

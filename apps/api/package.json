@@ -27,6 +27,8 @@
 		"typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json"
 	},
 	"dependencies": {
+		"@hocuspocus/extension-database": "^4.7.0",
+		"@hocuspocus/server": "^4.7.0",
 		"@huddle/shared": "*",
 		"@nestjs/common": "^11.1.9",
 		"@nestjs/core": "^11.1.9",
@@ -53,9 +55,12 @@
 		"rimraf": "^3.0.2",
 		"rxjs": "^7.2.0",
 		"winston": "^3.17.0",
+		"ws": "^8.22.0",
+		"yjs": "^13.6.33",
 		"zod": "^4.1.0"
 	},
 	"devDependencies": {
+		"@hocuspocus/provider": "^4.7.0",
 		"@nestjs/cli": "^11.0.10",
 		"@nestjs/schematics": "^11.0.9",
 		"@nestjs/testing": "^11.1.9",
@@ -64,6 +69,7 @@
 		"@types/express": "^5.0.3",
 		"@types/node": "^22.13.0",
 		"@types/supertest": "^6.0.3",
+		"@types/ws": "^8.18.2",
 		"prisma": "^6.19.0",
 		"socket.io-client": "^4.8.4",
 		"source-map-support": "^0.5.20",

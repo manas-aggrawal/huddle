@@ -84,6 +84,17 @@ One socket per browser, on the API's own port. Names and payload types live in `
 - **Presence**: `presence:update { sessionId, viewing?, typing? }` reaches everyone else as `presence:changed` (at most 10 per second per socket). `presence:state` is the full list, sent when someone comes online, goes offline or changes role. It's held in memory, so the MVP runs as a single API process.
 - **`session:removed`**: sent to every tab of a member the Owner removes. Those tabs leave the room right away.
 
+## Shared document (Hocuspocus + Yjs)
+
+Live co-editing on the API's own port at `/collab`. There's one Yjs document per session, named by the session id. The layout conventions (sections, the `human` mark) are in `packages/shared/src/doc.ts`.
+
+- **Connect** with a Hocuspocus provider: `{ url: 'ws://<api>/collab', name: sessionId, token }`. Non-members and bad tokens are refused. Viewers get a read-only connection, and the server drops their edits.
+- **Permission changes apply live.** When the Owner removes someone or switches them between Editor and Viewer, that person's document connection is closed. The provider reconnects with the new rights, or is refused.
+- **Saving.** A snapshot goes to `Document.ydocState` 2 s after the last edit (at least every 10 s during constant typing), when the last person leaves, and on shutdown (`enableShutdownHooks`).
+- **The agent** writes through `AgentDocWriter` (`insertSection`, `appendToSection`, `getSectionText`, `getHumanOwnedRanges`), as a server-side peer. Its text carries no `human` mark.
+- **`DOC_EDITED`** timeline events record human edits, at most one per person per section per minute.
+- **Limits (MVP):** one API process, since documents live in that process's memory. The server trusts the `human` mark the browser sets.
+
 ## Docker
 
 The image builds from the **repo root**, because it needs the workspace lockfile and `packages/shared`:
