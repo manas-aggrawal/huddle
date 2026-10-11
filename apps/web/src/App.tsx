@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { AppLayout } from './components/AppLayout';
 import { GuestOnly, RequireAuth } from './components/RequireAuth';
@@ -8,7 +9,13 @@ import { InvitePage } from './pages/InvitePage';
 import { LoginPage } from './pages/LoginPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { RegisterPage } from './pages/RegisterPage';
-import { SessionRoomPage } from './pages/SessionRoomPage';
+
+// The room pulls in the editor (Tiptap + Yjs); load it only when a session is opened.
+const SessionRoomPage = lazy(() =>
+	import('./pages/SessionRoomPage').then((m) => ({
+		default: m.SessionRoomPage,
+	})),
+);
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -31,7 +38,20 @@ export default function App() {
 						<Route element={<RequireAuth />}>
 							<Route element={<AppLayout />}>
 								<Route path="/" element={<HomePage />} />
-								<Route path="/s/:sessionId" element={<SessionRoomPage />} />
+								<Route
+									path="/s/:sessionId"
+									element={
+										<Suspense
+											fallback={
+												<p className="px-4 py-8 text-sm text-muted">
+													Opening session…
+												</p>
+											}
+										>
+											<SessionRoomPage />
+										</Suspense>
+									}
+								/>
 							</Route>
 						</Route>
 						<Route path="*" element={<NotFoundPage />} />

@@ -1,6 +1,8 @@
 import { EventType } from '@huddle/shared';
 import { AgentDocWriter } from '@src/collab/agent-doc-writer.service';
+import { fragmentOf } from '@src/collab/doc-structure';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import * as Y from 'yjs';
 import { createTestApp } from './utils/create-app';
 import { testPrisma } from './utils/db';
 import {
@@ -321,7 +323,7 @@ describe('Shared document server', () => {
 			await serverHas(s, 's-1', 'Agent text. Edit one. Edit two.');
 			typeInto(leo.doc, 's-2', 'Other section.', ctx.users.leo.id);
 			await serverHas(s, 's-2', 'Other section.');
-			await sleep(200); // events are written just after the change
+			await sleep(400); // events are written once the title settles (150 ms in tests)
 
 			const events = await docEdits(s);
 			expect(events.map((e) => e.payload)).toEqual([
@@ -335,8 +337,28 @@ describe('Shared document server', () => {
 
 			// More agent writing adds no events.
 			await writer().appendToSection(s, 's-2', ' Agent again.');
-			await sleep(200);
+			await sleep(400);
 			expect(await docEdits(s)).toHaveLength(2);
+		});
+
+		it('records the section title as typed, not the empty heading of a brand-new section', async () => {
+			const s = await team();
+			const maya = await connect('maya', s);
+			// The editor creates an empty heading first, then the title is typed into it.
+			typeSection(maya.doc, 's-new', '', '', ctx.users.maya.id);
+			await sleep(30);
+			const heading = fragmentOf(maya.doc).get(0) as Y.XmlElement;
+			(heading.get(0) as Y.XmlText).insert(0, 'Pricing', {
+				human: { userId: ctx.users.maya.id },
+			});
+			await sleep(400);
+
+			const events = await docEdits(s);
+			expect(events).toHaveLength(1);
+			expect(events[0].payload).toMatchObject({
+				sectionId: 's-new',
+				sectionTitle: 'Pricing',
+			});
 		});
 	});
 

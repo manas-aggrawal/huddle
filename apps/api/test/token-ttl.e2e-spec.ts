@@ -24,7 +24,8 @@ describe('Access token lifetime (ACCESS_TOKEN_TTL)', () => {
 
 	it('expires after the configured time, and the refresh token gets a working new pair', async () => {
 		const { token, refreshToken } = ctx.users.maya;
-		const me = () => ctx.http.get('/users/me').set('Authorization', `Bearer ${token}`);
+		const me = () =>
+			ctx.http.get('/users/me').set('Authorization', `Bearer ${token}`);
 		await me().expect(200);
 
 		await new Promise((r) => setTimeout(r, 2100));

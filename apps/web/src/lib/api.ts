@@ -75,6 +75,31 @@ export function refreshAccessToken(): Promise<string | null> {
 	return refreshing;
 }
 
+/** Seconds until a JWT expires (0 if it can't be read). */
+function secondsLeft(token: string): number {
+	try {
+		const payload = JSON.parse(
+			atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')),
+		);
+		return typeof payload.exp === 'number'
+			? payload.exp - Date.now() / 1000
+			: 0;
+	} catch {
+		return 0;
+	}
+}
+
+/**
+ * An access token that's good for at least the next 15 seconds, refreshing
+ * first if needed. For connections that log in once (Socket.IO, the document
+ * server) rather than per request.
+ */
+export async function getFreshAccessToken(): Promise<string> {
+	const token = getTokens()?.accessToken;
+	if (token && secondsLeft(token) > 15) return token;
+	return (await refreshAccessToken()) ?? token ?? '';
+}
+
 /** fetch with the access token attached; on a 401 it refreshes once and retries. */
 async function authFetch(input: Request): Promise<Response> {
 	const retry = input.clone();

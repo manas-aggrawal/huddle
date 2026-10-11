@@ -3,7 +3,7 @@ import type {
 	ServerToClientEvents,
 } from '@huddle/shared';
 import { io, type Socket } from 'socket.io-client';
-import { refreshAccessToken } from './api';
+import { getFreshAccessToken, refreshAccessToken } from './api';
 import { API_URL } from './config';
 import { getTokens, subscribeTokens } from './tokens';
 
@@ -20,7 +20,9 @@ export function getSocket(): HuddleSocket {
 	if (socket) return socket;
 	const s: HuddleSocket = io(API_URL, {
 		transports: ['websocket'],
-		auth: (cb) => cb({ token: getTokens()?.accessToken ?? '' }),
+		auth: (cb) => {
+			void getFreshAccessToken().then((token) => cb({ token }));
+		},
 	});
 
 	let refreshedForThisFailure = false;
