@@ -13,6 +13,8 @@ export const {
 	THROTTLE_LIMIT, // Max requests per window for general routes, default: 100
 	// CORS — comma-separated list of allowed origins; unset = CORS disabled
 	ALLOWED_ORIGINS,
+	// Where the web app runs; invite links point here
+	WEB_APP_URL = 'http://localhost:5173',
 	// Model a new session uses when the creator doesn't pick one
 	DEFAULT_MODEL_PROVIDER = 'groq',
 	DEFAULT_MODEL_ID = 'llama-3.3-70b-versatile',

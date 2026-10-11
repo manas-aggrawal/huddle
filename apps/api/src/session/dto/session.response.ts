@@ -37,7 +37,7 @@ export const SessionListItemSchema = SessionSchema.extend({
 });
 export class SessionListItemDto extends createZodDto(SessionListItemSchema) {}
 
-const MemberSchema = z.object({
+export const MemberSchema = z.object({
 	userId: z.uuid(),
 	username: z.string(),
 	firstname: z.string(),
@@ -46,6 +46,8 @@ const MemberSchema = z.object({
 	canApprove: z.boolean(),
 	joinedAt: z.string(),
 });
+
+export class MemberDto extends createZodDto(MemberSchema) {}
 
 const PlanStepSchema = z.object({
 	id: z.uuid(),

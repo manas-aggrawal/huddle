@@ -126,7 +126,7 @@ export class SessionService {
 				actorType: ActorType.USER,
 				actorId: userId,
 				payload: {
-					actor: await this.actorSnapshot(tx, userId),
+					actor: await this.timeline.actorSnapshot(tx, userId),
 					title: created.title,
 					goal: created.goal,
 				},
@@ -264,7 +264,7 @@ export class SessionService {
 				actorType: ActorType.USER,
 				actorId: membership.userId,
 				payload: {
-					actor: await this.actorSnapshot(tx, membership.userId),
+					actor: await this.timeline.actorSnapshot(tx, membership.userId),
 					action: dto.action,
 					from,
 					to,
@@ -316,14 +316,5 @@ export class SessionService {
 			);
 		}
 		return personal.workspaceId;
-	}
-
-	/** Display details stored in event payloads, so the timeline renders without lookups. */
-	private async actorSnapshot(tx: Prisma.TransactionClient, userId: string) {
-		const user = await tx.user.findUniqueOrThrow({
-			where: { id: userId },
-			select: { id: true, firstname: true, lastname: true },
-		});
-		return { id: user.id, name: `${user.firstname} ${user.lastname}`.trim() };
 	}
 }
