@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module';
 import { InviteModule } from './invite/invite.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { PrismaModule } from './prisma/prisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { SessionModule } from './session/session.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { UserModule } from './user/user.module';
@@ -32,6 +33,7 @@ import { UserModule } from './user/user.module';
 		TimelineModule,
 		SessionModule,
 		InviteModule,
+		RealtimeModule,
 	],
 	providers: [
 		{

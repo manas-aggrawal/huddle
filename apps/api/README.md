@@ -74,6 +74,16 @@ Inject the mock model with `overrides: [{ provide: <LLM token>, useValue: mock.m
 | GET | `/users`, `/users/:id` | ADMIN only |
 | GET | `/health` | Public. Checks the database. |
 
+## Realtime (Socket.IO)
+
+One socket per browser, on the API's own port. Names and payload types live in `@huddle/shared` (`SocketEvent`, `ClientToServerEvents`, `ServerToClientEvents`).
+
+- **Connect** with the access token: `io(API_URL, { auth: { token } })`. No token, or a bad or expired one, means `connect_error`.
+- **`session:join { sessionId, sinceSeq }`** (with an ack): members get the events after `sinceSeq` (at most 1,000, then `hasMore`) plus who's online. Non-members get `{ ok: false, error: { status: 404 } }`. To reconnect, join again with the last seq you saw. Replay and live events can overlap, so dedupe by `seq`.
+- **`timeline:event`**: every new event, sent only after its transaction commits. Code that appends events must use `timeline.transaction()`, not `prisma.$transaction()` (append throws otherwise).
+- **Presence**: `presence:update { sessionId, viewing?, typing? }` reaches everyone else as `presence:changed` (at most 10 per second per socket). `presence:state` is the full list, sent when someone comes online, goes offline or changes role. It's held in memory, so the MVP runs as a single API process.
+- **`session:removed`**: sent to every tab of a member the Owner removes. Those tabs leave the room right away.
+
 ## Docker
 
 The image builds from the **repo root**, because it needs the workspace lockfile and `packages/shared`:
