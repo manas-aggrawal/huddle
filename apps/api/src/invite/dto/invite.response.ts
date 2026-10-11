@@ -9,7 +9,8 @@ export const InviteSchema = z.object({
 	role: z.enum(SessionRole),
 	createdBy: PersonSchema,
 	useCount: z.number().int(),
-	expiresAt: z.string().nullable(),
+	// iso.datetime, not string: nestjs-zod turns a top-level nullable z.string() into an array in OpenAPI.
+	expiresAt: z.iso.datetime().nullable(),
 	createdAt: z.string(),
 });
 export class InviteDto extends createZodDto(InviteSchema) {}
@@ -25,7 +26,8 @@ export const InvitePreviewSchema = z.object({
 	sessionTitle: z.string(),
 	invitedBy: z.string(),
 	role: z.enum(SessionRole),
-	expiresAt: z.string().nullable(),
+	// iso.datetime, not string: nestjs-zod turns a top-level nullable z.string() into an array in OpenAPI.
+	expiresAt: z.iso.datetime().nullable(),
 });
 export class InvitePreviewDto extends createZodDto(InvitePreviewSchema) {}
 

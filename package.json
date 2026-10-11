@@ -19,7 +19,8 @@
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"check": "biome check --write .",
-		"test:e2e": "npm run test:e2e -w @huddle/api"
+		"test:e2e": "npm run test:e2e -w @huddle/api",
+		"gen:api": "npm run gen:api -w @huddle/web"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.5",

@@ -7,7 +7,8 @@
 			"!**/node_modules",
 			"!**/coverage",
 			"!**/*.tsbuildinfo",
-			"!**/package-lock.json"
+			"!**/package-lock.json",
+			"!**/api-schema.d.ts"
 		]
 	},
 	"assist": {
@@ -166,5 +167,10 @@
 		"enabled": true,
 		"clientKind": "git",
 		"useIgnoreFile": true
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
 	}
 }

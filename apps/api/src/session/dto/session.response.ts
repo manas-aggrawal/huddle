@@ -27,7 +27,8 @@ export const SessionSchema = z.object({
 		.describe('Number of the newest timeline event'),
 	createdAt: z.string(),
 	updatedAt: z.string().describe('Last activity'),
-	completedAt: z.string().nullable(),
+	// iso.datetime, not string: nestjs-zod turns a top-level nullable z.string() into an array in OpenAPI.
+	completedAt: z.iso.datetime().nullable(),
 });
 export class SessionDto extends createZodDto(SessionSchema) {}
 

@@ -1,9 +1,115 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Components use the Tailwind names below (bg-surface,
+ * text-muted, border-line, bg-accent…), which point at these variables, so
+ * light and dark mode swap in one place.
+ * Theme: follows the system unless the user picks one (html[data-theme]).
+ */
 :root {
-	font-family: system-ui, -apple-system, sans-serif;
-	color-scheme: light dark;
+	color-scheme: light;
+	--bg: #f6f5f2;
+	--surface: #ffffff;
+	--surface-2: #f0eee9;
+	--line: #e3e0d8;
+	--ink: #1d1c1a;
+	--muted: #6b6860;
+	--accent: #4f46e5;
+	--accent-ink: #ffffff;
+	--accent-soft: #e8e7fc;
+	--ok: #15803d;
+	--ok-soft: #dcf3e3;
+	--warn: #b45309;
+	--warn-soft: #fbecd5;
+	--danger: #b91c1c;
+	--danger-soft: #fbe2e2;
+	--focus: #6366f1;
+	--shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 2px 8px rgb(0 0 0 / 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		color-scheme: dark;
+		--bg: #131312;
+		--surface: #1c1b1a;
+		--surface-2: #252422;
+		--line: #34322f;
+		--ink: #edebe6;
+		--muted: #a19d94;
+		--accent: #8b85ff;
+		--accent-ink: #12111f;
+		--accent-soft: #2a2850;
+		--ok: #4ade80;
+		--ok-soft: #173322;
+		--warn: #fbbf24;
+		--warn-soft: #3a2c10;
+		--danger: #f87171;
+		--danger-soft: #3d1a1a;
+		--focus: #a5a1ff;
+		--shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+	}
+}
+
+:root[data-theme="dark"] {
+	color-scheme: dark;
+	--bg: #131312;
+	--surface: #1c1b1a;
+	--surface-2: #252422;
+	--line: #34322f;
+	--ink: #edebe6;
+	--muted: #a19d94;
+	--accent: #8b85ff;
+	--accent-ink: #12111f;
+	--accent-soft: #2a2850;
+	--ok: #4ade80;
+	--ok-soft: #173322;
+	--warn: #fbbf24;
+	--warn-soft: #3a2c10;
+	--danger: #f87171;
+	--danger-soft: #3d1a1a;
+	--focus: #a5a1ff;
+	--shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+@theme inline {
+	--color-bg: var(--bg);
+	--color-surface: var(--surface);
+	--color-surface-2: var(--surface-2);
+	--color-line: var(--line);
+	--color-ink: var(--ink);
+	--color-muted: var(--muted);
+	--color-accent: var(--accent);
+	--color-accent-ink: var(--accent-ink);
+	--color-accent-soft: var(--accent-soft);
+	--color-ok: var(--ok);
+	--color-ok-soft: var(--ok-soft);
+	--color-warn: var(--warn);
+	--color-warn-soft: var(--warn-soft);
+	--color-danger: var(--danger);
+	--color-danger-soft: var(--danger-soft);
+	--color-focus: var(--focus);
+	--shadow-card: var(--shadow);
+	--font-sans:
+		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+		"Helvetica Neue", Arial, sans-serif;
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html,
+body,
+#root {
+	min-height: 100%;
 }
 
 body {
 	margin: 0;
-	padding: 2rem;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
 }
