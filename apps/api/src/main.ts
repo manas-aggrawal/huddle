@@ -38,6 +38,8 @@ async function bootstrap() {
 		bodyParser: false,
 	});
 	configureApp(app);
+	// On Ctrl+C / SIGTERM, run shutdown hooks so open shared documents are saved first.
+	app.enableShutdownHooks();
 
 	const port = PORT ?? 3001;
 	await app.listen(port);

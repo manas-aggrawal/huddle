@@ -7,6 +7,8 @@ Each `## Txx` block below becomes one GitHub issue. Each `Labels:` line becomes 
 - **Frontend:** manual test scenarios, checked off in the issue before closing.
 - A ticket is done only when its listed e2e tests pass in `npm run test:e2e` or its manual checklist is fully ticked.
 
+**UI convention: hide, don't disable.** If a person's role can never do something, the UI doesn't render that control at all: no greyed-out buttons, no disabled menu items, no locked toggles. Visibility comes from `can()` in `@huddle/shared`, plus role-specific rules such as `canApprove` existing only for Editors. Disabled states are only for temporary conditions, such as a paused session or a request in flight. The API's 403/400 checks stay the real enforcement.
+
 ---
 
 ## T01 · Set up monorepo with the boilerplate as `apps/api`
@@ -319,12 +321,14 @@ The main screen: a header with the title, status, Owner, avatars and Invite/Hand
 - [ ] Timeline pane: virtualized list rendering each `EventType` with an actor avatar and a relative time. Auto-scrolls when the user is already at the bottom.
 - [ ] Doc pane: Tiptap editor bound to the Yjs doc, with collaborative cursors that show names and avatar colors (color computed from a hash of the user id, initials from the name; neither is stored)
 - [ ] Read-only Tiptap for Viewers, plus a small "View only" badge
-- [ ] Hide or disable controls based on role, using permission helpers from `packages/shared`
+- [ ] Members popover (from the avatars): everyone sees the member list. The Owner also gets a role menu (Editor/Viewer) and Remove on each non-Owner row. The "Can approve" toggle appears **only on Editor rows**.
+- [ ] Hide (never disable) controls the role can't use, following the "hide, don't disable" convention and `can()` from `packages/shared`
 
 ### Test scenarios (manual)
 - [ ] With 2 browsers logged in as different users, each sees the other's avatar within 1 second. Closing one removes its avatar.
 - [ ] Typing in the doc in browser A appears in browser B live, with A's colored cursor and name
-- [ ] Viewer browser: the doc can't be edited, Invite and Hand-off are hidden, and the composer shows only Ask
+- [ ] Viewer browser: the doc can't be edited (no toolbar), Invite and Hand-off aren't rendered, and the composer has no mode picker (Ask is the only mode)
+- [ ] Owner browser: the "Can approve" toggle shows on Editor rows and is absent on Viewer rows. Editor browser: no role menu, Remove or toggle at all
 - [ ] Triggering an event from the API (for example a status change) shows it in both timelines in the same order
 - [ ] Killing the API for 10 seconds, restarting it, and appending an event: the client reconnects, and no events are missing or duplicated
 - [ ] At 400px width the panes stack and nothing scrolls sideways
@@ -473,7 +477,7 @@ The message box at the bottom of the timeline, with a mode switcher. Every messa
 ### Tasks
 - [ ] `POST /sessions/:id/messages` with `{ mode, content, planStepId? }`, enforcing role per mode
 - [ ] The HUMAN_MESSAGE event payload includes `messageId`, `mode`, and `author {id, name, role}`
-- [ ] Composer UI: a mode dropdown (Suggest by default), Enter to send, Shift+Enter for a newline. Sends `typing` presence while typing.
+- [ ] Composer UI: a mode picker (Suggest by default) shown only when the role has more than one mode. Viewers get the plain box, sending as Ask. Enter to send, Shift+Enter for a newline. Sends `typing` presence while typing.
 - [ ] Message status chips in the timeline (Queued → Acknowledged / Applied / Declined / Answered), updated live
 - [ ] An `@mention` autocomplete over members, stored in the content as `@[userId]`, which creates a MENTION notification
 
@@ -482,7 +486,7 @@ The message box at the bottom of the timeline, with a mode switcher. Every messa
 - **e2e:** a Viewer posting SUGGEST or INTERRUPT gets 403. A Viewer posting ASK gets 201.
 - **e2e:** a message mentioning `@[leoId]` creates a MENTION notification for Leo
 - **e2e:** content that's empty or over 4000 characters returns 400
-- **Manual:** the mode dropdown shows only "Ask" for a Viewer
+- **Manual:** a Viewer sees no mode picker, and their message is sent as Ask. Suggest and Interrupt never appear for them.
 - **Manual:** a sent message appears in both browsers with a "Queued" chip, which changes when the agent acknowledges it
 
 ---
@@ -555,7 +559,7 @@ A single approval system used for outline approval, rewriting human text, markin
 - [ ] Resolving appends an APPROVAL_RESOLVED event, optionally creates a Decision (T21), and wakes the runner
 - [ ] **Status rule:** creating a blocking approval sets `Session.status = WAITING`, and resolving the last pending one sets it back to RUNNING, in the **same transaction** as the approval write. That way the two can't disagree.
 - [ ] Concurrency: the first resolution wins, and any later one returns 409
-- [ ] UI: an approval card in the timeline with Approve, Reject and Discuss. Discuss pre-fills the composer.
+- [ ] UI: an approval card in the timeline. Approve and Reject are rendered only for people who can approve (the Owner, plus Editors with `canApprove`). Others see the card and its status without those buttons. Discuss pre-fills the composer.
 - [ ] UI: a pending-approvals badge in the header, and the 🔒 marker on gated plan steps
 
 ### Test scenarios
@@ -566,6 +570,7 @@ A single approval system used for outline approval, rewriting human text, markin
 - **e2e:** the request creates Notifications for the Owner and for Editors with canApprove, and for no one else
 - **e2e:** a rejected OUTLINE returns the agent to PLANNING to revise, using the rejection note as input
 - **Manual:** the card appears in every browser. Once someone approves it, it shows "Approved by Maya" everywhere.
+- **Manual:** an Editor without `canApprove` and a Viewer see the card with no Approve or Reject buttons. After the Owner grants `canApprove`, the buttons appear for that Editor without a reload.
 
 ---
 
@@ -659,7 +664,7 @@ Editors and the Owner can edit the plan directly: add a step, rename, describe, 
 - [ ] `POST/PATCH/DELETE /sessions/:id/plan-steps`, plus `POST /reorder` with `{ orderedIds }`
 - [ ] The step currently IN_PROGRESS can't be deleted or reordered (409). Skipping it means interrupting first.
 - [ ] Append a PLAN_UPDATED event with `{ by, diff }`
-- [ ] UI: drag to reorder, inline title editing, a step menu (Skip, Needs approval, Delete)
+- [ ] UI: drag to reorder, inline title editing, a step menu (Skip, Needs approval, Delete). For Viewers none of these render: no drag handles, no menu, plain titles.
 
 ### Test scenarios
 - **e2e:** reordering updates `position` for every step to match `orderedIds`, and appends a PLAN_UPDATED event

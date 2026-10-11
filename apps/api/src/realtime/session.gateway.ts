@@ -82,6 +82,8 @@ const error = (status: number, message: string): SocketError => ({
  * joining again with the last seq seen.
  */
 @WebSocketGateway({
+	// The document server (/collab) shares this HTTP server; leave its upgrades alone.
+	destroyUpgrade: false,
 	cors: {
 		origin: ALLOWED_ORIGINS
 			? ALLOWED_ORIGINS.split(',').map((o) => o.trim())
