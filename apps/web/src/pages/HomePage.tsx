@@ -1,13 +1,16 @@
 import type { SessionRole, SessionStatus } from '@huddle/shared';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router';
-import { Badge, Card } from '../components/ui';
+import { NewSessionDialog } from '../components/NewSessionDialog';
+import { Badge, Button, Card } from '../components/ui';
 import { api, unwrap } from '../lib/api';
 import { fullName, useAuth } from '../lib/auth';
 import { ROLE_LABEL, STATUS_LABEL, timeAgo } from '../lib/labels';
 
 export function HomePage() {
 	const { user } = useAuth();
+	const [creating, setCreating] = useState(false);
 	const sessions = useQuery({
 		queryKey: ['sessions'],
 		queryFn: () => unwrap(api.GET('/sessions')),
@@ -15,12 +18,18 @@ export function HomePage() {
 
 	return (
 		<main className="mx-auto max-w-6xl px-4 py-8">
-			<h1 className="text-2xl font-semibold">
-				{user ? `Hi, ${user.firstname}` : 'Your sessions'}
-			</h1>
-			<p className="mt-1 text-sm text-muted">
-				Sessions you're part of, most recently active first.
-			</p>
+			<div className="flex flex-wrap items-end justify-between gap-3">
+				<div>
+					<h1 className="text-2xl font-semibold">
+						{user ? `Hi, ${user.firstname}` : 'Your sessions'}
+					</h1>
+					<p className="mt-1 text-sm text-muted">
+						Sessions you're part of, most recently active first.
+					</p>
+				</div>
+				<Button onClick={() => setCreating(true)}>New session</Button>
+			</div>
+			<NewSessionDialog open={creating} onClose={() => setCreating(false)} />
 
 			<section className="mt-6">
 				{sessions.isPending && (
@@ -35,7 +44,7 @@ export function HomePage() {
 					<Card className="p-8 text-center">
 						<p className="font-medium">No sessions yet</p>
 						<p className="mt-1 text-sm text-muted">
-							When someone invites you, the session shows up here.
+							Start one with the agent, or open an invite link from a teammate.
 						</p>
 					</Card>
 				)}

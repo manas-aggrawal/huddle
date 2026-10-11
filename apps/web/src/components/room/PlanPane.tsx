@@ -45,9 +45,12 @@ const STATUS: Record<
 
 export function PlanPane({
 	steps,
+	planning,
 	className,
 }: {
 	steps: PlanStep[];
+	/** Session is in PLANNING: the agent is drafting the outline. */
+	planning: boolean;
 	className?: string;
 }) {
 	const done = steps.filter((s) => s.status === StepStatus.DONE).length;
@@ -64,11 +67,19 @@ export function PlanPane({
 			className={className}
 			bodyClassName="overflow-y-auto"
 		>
-			{steps.length === 0 ? (
-				<p className="p-4 text-sm text-muted">
-					The agent hasn't proposed a plan yet. Steps appear here as soon as it
-					does.
-				</p>
+			{steps.length === 0 && planning ? (
+				<div
+					className="flex items-center gap-2 p-4 text-sm text-muted"
+					role="status"
+				>
+					<span
+						aria-hidden
+						className="size-3.5 animate-spin rounded-full border-2 border-accent border-t-transparent"
+					/>
+					Agent is drafting an outline…
+				</div>
+			) : steps.length === 0 ? (
+				<p className="p-4 text-sm text-muted">No plan yet.</p>
 			) : (
 				<ol className="flex flex-col gap-0.5 p-2">
 					{steps.map((step, i) => {

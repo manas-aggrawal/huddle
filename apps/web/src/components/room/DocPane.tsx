@@ -1,6 +1,7 @@
 import { SECTION_HEADING_LEVEL, SECTION_ID_ATTR } from '@huddle/shared';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
+import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef } from 'react';
@@ -86,6 +87,11 @@ function Editor({
 			StarterKit.configure({ undoRedo: false, heading: false }),
 			SectionHeading.configure({ levels: [2, 3] }),
 			HumanMark.configure({ userId: me.userId }),
+			Placeholder.configure({
+				placeholder: editable
+					? 'Start writing, or wait for the agent’s outline…'
+					: 'Nothing written yet.',
+			}),
 			Collaboration.configure({ document: connection.doc }),
 			CollaborationCaret.configure({
 				provider: connection.provider,

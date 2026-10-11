@@ -120,3 +120,10 @@ export const NotificationType = {
 	HANDOFF_RECEIVED: 'HANDOFF_RECEIVED',
 } as const;
 export type NotificationType = ValueOf<typeof NotificationType>;
+
+/** Length limits for creating a session. The API validates them; the web form checks them first. */
+export const SessionLimits = {
+	TITLE_MAX: 200,
+	GOAL_MAX: 5000,
+	CONTEXT_MAX: 10_000,
+} as const;
