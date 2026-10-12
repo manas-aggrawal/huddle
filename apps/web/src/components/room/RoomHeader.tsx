@@ -14,6 +14,7 @@ import { Badge, BotIcon, Button, LinkIcon, LockIcon } from '../ui';
 import { HandoffDialog } from './HandoffDialog';
 import { InviteDialog } from './InviteDialog';
 import { MembersPopover } from './MembersPopover';
+import { SessionControls } from './SessionControls';
 import { SessionSettings } from './SessionSettings';
 
 const CONNECTION = {
@@ -80,6 +81,9 @@ export function RoomHeader({
 					canChange={can(me, 'changeSettings') && session.status !== 'DONE'}
 				/>
 				<MembersPopover session={session} presence={presence} />
+				<Can member={me} action="pauseOrEnd">
+					<SessionControls session={session} />
+				</Can>
 				<Can member={me} action="handOff">
 					<Button size="sm" variant="ghost" onClick={() => setHandingOff(true)}>
 						Hand off
