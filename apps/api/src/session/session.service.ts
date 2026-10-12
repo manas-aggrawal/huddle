@@ -3,6 +3,7 @@ import {
 	AgentState,
 	ApprovalKind,
 	ApprovalStatus,
+	BLOCKING_APPROVAL_KINDS,
 	Effort,
 	EventType,
 	MessageMode,
@@ -321,7 +322,11 @@ export class SessionService {
 	): Promise<SessionStatus> {
 		const [pendingApprovals, planSteps] = await Promise.all([
 			tx.approval.count({
-				where: { sessionId, status: ApprovalStatus.PENDING },
+				where: {
+					sessionId,
+					status: ApprovalStatus.PENDING,
+					kind: { in: [...BLOCKING_APPROVAL_KINDS] },
+				},
 			}),
 			tx.planStep.count({ where: { sessionId } }),
 		]);

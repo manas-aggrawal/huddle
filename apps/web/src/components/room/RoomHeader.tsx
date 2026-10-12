@@ -9,7 +9,7 @@ import type { ConnectionStatus } from '../../hooks/useSessionSocket';
 import { AGENT_LABEL, STATUS_LABEL } from '../../lib/labels';
 import { asRole, memberName, type SessionDetail } from '../../lib/session';
 import { Can } from '../Can';
-import { Badge, BotIcon, Button, LinkIcon } from '../ui';
+import { Badge, BotIcon, Button, LinkIcon, LockIcon } from '../ui';
 import { InviteDialog } from './InviteDialog';
 import { MembersPopover } from './MembersPopover';
 
@@ -47,6 +47,13 @@ export function RoomHeader({
 				<div className="flex flex-wrap items-center gap-2">
 					<h1 className="truncate text-lg font-semibold">{session.title}</h1>
 					<Badge tone={status.tone}>{status.label}</Badge>
+					{session.pendingApprovals.length > 0 && (
+						<Badge tone="warn">
+							<LockIcon size={11} />
+							{session.pendingApprovals.length} pending{' '}
+							{session.pendingApprovals.length === 1 ? 'approval' : 'approvals'}
+						</Badge>
+					)}
 					{agentLabel && session.status !== 'DONE' && (
 						<Badge tone="accent">
 							<BotIcon size={12} className="animate-pulse" />

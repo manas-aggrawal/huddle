@@ -3,6 +3,7 @@ import {
 	AgentState,
 	ApprovalKind,
 	ApprovalStatus,
+	BLOCKING_APPROVAL_KINDS,
 	EventType,
 	MessageMode,
 	MessageStatus,
@@ -37,6 +38,7 @@ type NextAction =
 	| { kind: 'queue' }
 	| { kind: 'replan' }
 	| { kind: 'write'; stepId: string }
+	| { kind: 'gate'; stepId: string }
 	| { kind: 'finish' }
 	| { kind: 'idle' };
 
@@ -202,6 +204,8 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 					else if (next.kind === 'queue') await this.queue.process(run);
 					else if (next.kind === 'write')
 						await this.writeStep(run, next.stepId);
+					else if (next.kind === 'gate')
+						await this.requestStepGate(sessionId, next.stepId);
 					else await this.requestFinal(sessionId);
 				} catch (err) {
 					if (run.aborted) continue; // Cut off on purpose; re-read the state.
@@ -226,22 +230,45 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 				approvals: { where: { status: ApprovalStatus.PENDING } },
 			},
 		});
-		if (!session || session.approvals.length > 0) return { kind: 'idle' };
+		if (!session) return { kind: 'idle' };
+		const blocked = session.approvals.some((a) =>
+			BLOCKING_APPROVAL_KINDS.includes(a.kind as ApprovalKind),
+		);
+		if (blocked) return { kind: 'idle' };
 		if (session.status === SessionStatus.PLANNING) return { kind: 'plan' };
 		if (session.status !== SessionStatus.RUNNING) return { kind: 'idle' };
 		// Interrupts first, then the team's queued input, then the next section.
 		if (await this.replanner.hasPending(sessionId)) return { kind: 'replan' };
 		if (await this.queue.hasQueued(sessionId)) return { kind: 'queue' };
 
+		// Steps waiting on their own approval are skipped for now; the rest go on.
+		const gated = new Set(
+			session.approvals.map((a) => a.planStepId).filter(Boolean),
+		);
 		const next = session.planSteps.find(
 			(s) =>
-				s.status === StepStatus.IN_PROGRESS || s.status === StepStatus.PENDING,
+				(s.status === StepStatus.IN_PROGRESS ||
+					s.status === StepStatus.PENDING) &&
+				!gated.has(s.id),
 		);
-		if (next) return { kind: 'write', stepId: next.id };
-		// Blocked steps wait for a person; the doc isn't finished until they're settled.
-		if (session.planSteps.some((s) => s.status === StepStatus.BLOCKED)) {
-			return { kind: 'idle' };
+		if (next) {
+			if (next.requiresApproval && next.status === StepStatus.PENDING) {
+				const approved = await this.prisma.approval.count({
+					where: {
+						planStepId: next.id,
+						kind: ApprovalKind.CUSTOM,
+						status: ApprovalStatus.APPROVED,
+					},
+				});
+				if (!approved) return { kind: 'gate', stepId: next.id };
+			}
+			return { kind: 'write', stepId: next.id };
 		}
+		// Blocked or gated steps wait for a person; the doc isn't finished until they're settled.
+		const waiting = session.planSteps.some(
+			(s) => s.status === StepStatus.BLOCKED || gated.has(s.id),
+		);
+		if (waiting) return { kind: 'idle' };
 		return { kind: 'finish' };
 	}
 
@@ -250,6 +277,21 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 			where: { id: stepId },
 		});
 		await this.writer.write(run, step);
+	}
+
+	/** A step marked "needs approval" waits for a CUSTOM approval before it's written. */
+	private async requestStepGate(sessionId: string, stepId: string) {
+		await this.timeline.transaction(async (tx) => {
+			const step = await tx.planStep.findUniqueOrThrow({
+				where: { id: stepId },
+			});
+			await this.approvals.request(tx, sessionId, {
+				kind: ApprovalKind.CUSTOM,
+				title: `Start “${step.title}”?`,
+				details: { reason: 'step_gate', stepTitle: step.title },
+				planStepId: stepId,
+			});
+		});
 	}
 
 	private async requestFinal(sessionId: string) {
