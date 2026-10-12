@@ -99,5 +99,16 @@ export const SessionDetailSchema = SessionSchema.extend({
 	decisions: z.array(DecisionSchema),
 	/** Conflicts waiting for the Owner. */
 	openConflicts: z.array(OpenConflictSchema),
+	/** The latest handoff, with its briefing (the new Owner sees it as a card). */
+	lastHandoff: z
+		.object({
+			id: z.uuid(),
+			from: z.object({ id: z.uuid(), name: z.string() }),
+			to: z.object({ id: z.uuid(), name: z.string() }),
+			briefing: z.string(),
+			note: z.string().max(2000).nullable(),
+			createdAt: z.string(),
+		})
+		.nullable(),
 });
 export class SessionDetailDto extends createZodDto(SessionDetailSchema) {}
