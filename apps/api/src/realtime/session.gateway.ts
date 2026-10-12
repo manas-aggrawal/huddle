@@ -248,6 +248,24 @@ export class SessionGateway
 			.to(sessionRoom(sessionId))
 			.emit(SocketEvent.TIMELINE_EVENT, toTimelineEventDto(event));
 
+		if (event.type === EventType.HANDOFF) {
+			const p = event.payload as {
+				from?: { id?: string };
+				to?: { id?: string };
+			};
+			let changed = false;
+			if (p.from?.id)
+				changed =
+					this.presence.setRole(sessionId, p.from.id, SessionRole.EDITOR) ||
+					changed;
+			if (p.to?.id)
+				changed =
+					this.presence.setRole(sessionId, p.to.id, SessionRole.OWNER) ||
+					changed;
+			if (changed) this.broadcastPresence(sessionId);
+			return;
+		}
+
 		const payload = event.payload as {
 			member?: { id?: string };
 			to?: { role?: SessionRole };

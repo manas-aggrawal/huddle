@@ -10,6 +10,7 @@ import { AGENT_LABEL, STATUS_LABEL } from '../../lib/labels';
 import { asRole, memberName, type SessionDetail } from '../../lib/session';
 import { Can } from '../Can';
 import { Badge, BotIcon, Button, LinkIcon, LockIcon } from '../ui';
+import { HandoffDialog } from './HandoffDialog';
 import { InviteDialog } from './InviteDialog';
 import { MembersPopover } from './MembersPopover';
 
@@ -33,6 +34,7 @@ export function RoomHeader({
 }) {
 	const agentLabel = AGENT_LABEL[agentState];
 	const [inviting, setInviting] = useState(false);
+	const [handingOff, setHandingOff] = useState(false);
 	const me = { role: asRole(session.myRole), canApprove: session.myCanApprove };
 	const status =
 		session.status === 'WAITING' && !can(me, 'approve')
@@ -69,6 +71,16 @@ export function RoomHeader({
 			</div>
 			<div className="flex items-center gap-2">
 				<MembersPopover session={session} presence={presence} />
+				<Can member={me} action="handOff">
+					<Button size="sm" variant="ghost" onClick={() => setHandingOff(true)}>
+						Hand off
+					</Button>
+					<HandoffDialog
+						session={session}
+						open={handingOff}
+						onClose={() => setHandingOff(false)}
+					/>
+				</Can>
 				<Can member={me} action="invite">
 					<Button
 						size="sm"

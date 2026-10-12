@@ -507,6 +507,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{id}/handoff/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft a handoff briefing */
+        post: operations["HandoffController_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{id}/handoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hand off the session */
+        post: operations["HandoffController_handOff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -772,6 +806,23 @@ export interface components {
                 planStepId: string | null;
                 createdAt: string;
             }[];
+            lastHandoff: {
+                /** Format: uuid */
+                id: string;
+                from: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                };
+                to: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                };
+                briefing: string;
+                note: string | null;
+                createdAt: string;
+            } | null;
         };
         UpdateSessionStatusDto: {
             /** @enum {string} */
@@ -1008,6 +1059,30 @@ export interface components {
         };
         SeenResultDto_Output: {
             lastSeenSeq: number;
+        };
+        PreviewHandoffDto: {
+            /** Format: uuid */
+            toUserId: string;
+        };
+        BriefingDto_Output: {
+            briefing: string;
+        };
+        HandoffDto: {
+            /** Format: uuid */
+            toUserId: string;
+            briefing: string;
+            note?: string;
+        };
+        HandoffResultDto_Output: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            fromUserId: string;
+            /** Format: uuid */
+            toUserId: string;
+            briefing: string;
+            note: string | null;
+            createdAt: string;
         };
     };
     responses: never;
@@ -2262,6 +2337,98 @@ export interface operations {
                 };
             };
             /** @description Your role in this session can't watch */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HandoffController_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewHandoffDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BriefingDto_Output"];
+                };
+            };
+            /** @description Not an Editor of this session */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Your role in this session can't handOff */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    HandoffController_handOff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffResultDto_Output"];
+                };
+            };
+            /** @description Not an Editor of this session */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Your role in this session can't handOff */
             403: {
                 headers: {
                     [name: string]: unknown;

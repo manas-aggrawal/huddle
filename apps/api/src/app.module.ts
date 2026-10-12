@@ -10,6 +10,7 @@ import { CollabModule } from './collab/collab.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL } from './configs/env-vars';
 import { ConflictModule } from './conflict/conflict.module';
 import { DecisionModule } from './decision/decision.module';
+import { HandoffModule } from './handoff/handoff.module';
 import { HealthModule } from './health/health.module';
 import { InviteModule } from './invite/invite.module';
 import { LlmModule } from './llm/llm.module';
@@ -53,6 +54,7 @@ import { UserModule } from './user/user.module';
 		ConflictModule,
 		PlanModule,
 		CatchUpModule,
+		HandoffModule,
 		AgentModule,
 	],
 	providers: [

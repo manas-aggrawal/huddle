@@ -19,7 +19,13 @@ import {
 	ForbiddenException,
 	Injectable,
 } from '@nestjs/common';
-import { Decision, Prisma, Session, SessionMember } from '@prisma/client';
+import {
+	Decision,
+	Handoff,
+	Prisma,
+	Session,
+	SessionMember,
+} from '@prisma/client';
 import {
 	DEFAULT_MODEL_ID,
 	DEFAULT_MODEL_PROVIDER,
@@ -95,6 +101,25 @@ export function toDecisionDto(
 				}
 			: null,
 		pinnedAt: d.pinnedAt.toISOString(),
+	};
+}
+
+type Person = { id: string; firstname: string; lastname: string };
+const person = (u: Person) => ({
+	id: u.id,
+	name: `${u.firstname} ${u.lastname}`.trim(),
+});
+
+function toHandoffDto(
+	h: Handoff & { fromUser: Person; toUser: Person },
+): NonNullable<SessionDetailDto['lastHandoff']> {
+	return {
+		id: h.id,
+		from: person(h.fromUser),
+		to: person(h.toUser),
+		briefing: h.briefing,
+		note: h.note,
+		createdAt: h.createdAt.toISOString(),
 	};
 }
 
@@ -235,6 +260,14 @@ export class SessionService {
 					where: { resolvedAt: null },
 					orderBy: { createdAt: 'asc' },
 				},
+				handoffs: {
+					orderBy: { createdAt: 'desc' },
+					take: 1,
+					include: {
+						fromUser: { select: { id: true, firstname: true, lastname: true } },
+						toUser: { select: { id: true, firstname: true, lastname: true } },
+					},
+				},
 				decisions: {
 					where: { unpinnedAt: null },
 					orderBy: { pinnedAt: 'asc' },
@@ -284,6 +317,9 @@ export class SessionService {
 				planStepId: c.planStepId,
 				createdAt: c.createdAt.toISOString(),
 			})),
+			lastHandoff: session.handoffs[0]
+				? toHandoffDto(session.handoffs[0])
+				: null,
 		};
 	}
 

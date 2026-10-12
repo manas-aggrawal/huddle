@@ -7,6 +7,7 @@ import {
 	ApprovalCard,
 	approvalOutcomes,
 } from '../components/room/ApprovalBar';
+import { BriefingCard } from '../components/room/BriefingCard';
 import { CatchUpCard } from '../components/room/CatchUpCard';
 import { Composer } from '../components/room/Composer';
 import {
@@ -159,17 +160,35 @@ export function SessionRoomPage() {
 					names={names}
 					jumpTo={jumpTo}
 					header={
-						catchUp.data && (
-							<CatchUpCard
-								sessionId={s.id}
-								catchUp={catchUp.data}
-								onJump={(seq) =>
-									setJumpTo((j) => ({ seq, n: (j?.n ?? 0) + 1 }))
-								}
-							/>
-						)
+						<>
+							{s.lastHandoff && s.lastHandoff.to.id === user?.id && (
+								<BriefingCard handoff={s.lastHandoff} />
+							)}
+							{catchUp.data && (
+								<CatchUpCard
+									sessionId={s.id}
+									catchUp={catchUp.data}
+									onJump={(seq) =>
+										setJumpTo((j) => ({ seq, n: (j?.n ?? 0) + 1 }))
+									}
+								/>
+							)}
+						</>
 					}
 					renderExtra={(e) => {
+						if (e.type === EventType.HANDOFF) {
+							const h = e.payload as { briefing?: string };
+							return h.briefing ? (
+								<details className="mt-1 text-sm">
+									<summary className="cursor-pointer text-xs text-accent">
+										Read the briefing
+									</summary>
+									<p className="mt-1 whitespace-pre-line rounded-lg bg-surface-2 p-2">
+										{h.briefing}
+									</p>
+								</details>
+							) : null;
+						}
 						if (e.type === EventType.TOOL_CALL) {
 							return <ToolCallLinks payload={e.payload} />;
 						}
