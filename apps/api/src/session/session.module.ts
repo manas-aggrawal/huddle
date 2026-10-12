@@ -10,6 +10,6 @@ import { SessionService } from './session.service';
 	imports: [TimelineModule],
 	controllers: [SessionController, MembersController],
 	providers: [SessionService, MembersService, SessionAccessGuard],
-	exports: [SessionAccessGuard],
+	exports: [SessionAccessGuard, SessionService],
 })
 export class SessionModule {}

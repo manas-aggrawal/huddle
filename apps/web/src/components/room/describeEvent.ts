@@ -158,10 +158,22 @@ export function describeEvent(e: TimelineEventDto): {
 				text: `handed the session to ${nameOf(p.to) ?? 'someone'}`,
 				detail: str(p.note),
 			};
-		case EventType.MODEL_CHANGED:
-			return { text: 'changed the model', detail: str(p.modelId) };
 		case EventType.BUDGET_WARNING:
-			return { text: 'warned that the budget is running low' };
+			return p.reason === 'pool_exhausted'
+				? {
+						text: 'paused the session',
+						detail:
+							'The workspace used its token allowance. A workspace admin can raise it to carry on.',
+					}
+				: { text: 'warned that the budget is running low' };
+		case EventType.MODEL_CHANGED: {
+			const parts = [str(p.modelId), str(p.effort)?.toLowerCase()];
+			const cap = p.tokenBudget;
+			return {
+				text: 'changed the settings',
+				detail: `${parts.filter(Boolean).join(' · ')}${cap === null ? ' · no cap' : typeof cap === 'number' ? ` · cap ${cap.toLocaleString()} tokens` : ''}`,
+			};
+		}
 		case EventType.DOC_EDITED:
 			return {
 				text: `edited ${str(p.sectionTitle) ? `“${str(p.sectionTitle)}”` : 'the document'}`,

@@ -4,11 +4,14 @@ import {
 	ApprovalKind,
 	ApprovalStatus,
 	BLOCKING_APPROVAL_KINDS,
+	BUDGET_STEP_TOKENS,
 	EventType,
 	MessageMode,
 	MessageStatus,
+	NotificationType,
 	SessionStatus,
 	StepStatus,
+	WorkspaceRole,
 } from '@huddle/shared';
 import {
 	Inject,
@@ -21,7 +24,9 @@ import { TimelineEvent } from '@prisma/client';
 import { ApprovalService } from '@src/approval/approval.service';
 import { BudgetExceededError, PoolExhaustedError } from '@src/llm/errors';
 import { PrismaService } from '@src/prisma/prisma.service';
+import { SessionService } from '@src/session/session.service';
 import { TimelineService } from '@src/timeline/timeline.service';
+import { POOL_EXHAUSTED } from '@src/workspace/workspace.constants';
 import { AGENT_OPTIONS, type AgentOptions } from './agent.options';
 import { AgentRun } from './agent-run';
 import { AgentStateService } from './agent-state.service';
@@ -69,6 +74,7 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		private readonly asks: AskResponderService,
 		private readonly replanner: ReplannerService,
 		private readonly rewrites: RewriteService,
+		private readonly sessions: SessionService,
 		@Inject(AGENT_OPTIONS) private readonly options: AgentOptions,
 	) {}
 
@@ -231,6 +237,14 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 					else await this.requestFinal(sessionId);
 				} catch (err) {
 					if (run.aborted) continue; // Cut off on purpose; re-read the state.
+					if (err instanceof BudgetExceededError) {
+						await this.requestBudget(sessionId, err);
+						continue; // Now WAITING: the next look exits.
+					}
+					if (err instanceof PoolExhaustedError) {
+						await this.pausePool(sessionId, err);
+						break;
+					}
 					await this.reportFailure(sessionId, err);
 					break;
 				} finally {
@@ -328,6 +342,71 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 				kind: ApprovalKind.MARK_FINAL,
 				title: 'Mark the document final',
 			});
+		});
+	}
+
+	/** The session hit its own cap: ask its Owner (or an approver) for more. */
+	private async requestBudget(sessionId: string, err: BudgetExceededError) {
+		await this.timeline.transaction(async (tx) => {
+			const pending = await tx.approval.count({
+				where: {
+					sessionId,
+					kind: ApprovalKind.BUDGET,
+					status: ApprovalStatus.PENDING,
+				},
+			});
+			if (pending) return;
+			await this.approvals.request(tx, sessionId, {
+				kind: ApprovalKind.BUDGET,
+				title: `Approve +${(BUDGET_STEP_TOKENS / 1000).toFixed(0)}k tokens?`,
+				details: {
+					extraTokens: BUDGET_STEP_TOKENS,
+					used: err.used,
+					budget: err.budget,
+				},
+			});
+		});
+	}
+
+	/**
+	 * The workspace's pool ran out: pause every active session in it, and tell
+	 * the workspace admins (only they can raise the allowance).
+	 */
+	private async pausePool(sessionId: string, err: PoolExhaustedError) {
+		const active = await this.prisma.session.findMany({
+			where: {
+				workspaceId: err.workspaceId,
+				status: {
+					in: [
+						SessionStatus.PLANNING,
+						SessionStatus.RUNNING,
+						SessionStatus.WAITING,
+					],
+				},
+			},
+			select: { id: true },
+		});
+		const details = { used: err.used, allowance: err.allowance };
+		for (const s of active) {
+			await this.sessions.pauseBySystem(s.id, POOL_EXHAUSTED, details);
+		}
+		if (active.length === 0) return;
+		const admins = await this.prisma.workspaceMember.findMany({
+			where: { workspaceId: err.workspaceId, role: WorkspaceRole.ADMIN },
+			select: { userId: true },
+		});
+		await this.prisma.notification.createMany({
+			data: admins.map((a) => ({
+				userId: a.userId,
+				sessionId,
+				type: NotificationType.POOL_EXHAUSTED,
+				title:
+					`Your workspace used its ${err.allowance.toLocaleString('en-US')} tokens; ${active.length} session(s) paused`.slice(
+						0,
+						200,
+					),
+				refId: err.workspaceId,
+			})),
 		});
 	}
 

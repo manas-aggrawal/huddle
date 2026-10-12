@@ -3,6 +3,7 @@ import {
 	can,
 	type PresenceMember,
 	type SessionStatus,
+	type SessionUsage,
 } from '@huddle/shared';
 import { useState } from 'react';
 import type { ConnectionStatus } from '../../hooks/useSessionSocket';
@@ -13,6 +14,7 @@ import { Badge, BotIcon, Button, LinkIcon, LockIcon } from '../ui';
 import { HandoffDialog } from './HandoffDialog';
 import { InviteDialog } from './InviteDialog';
 import { MembersPopover } from './MembersPopover';
+import { SessionSettings } from './SessionSettings';
 
 const CONNECTION = {
 	connecting: { label: 'Connecting…', tone: 'neutral' },
@@ -26,7 +28,9 @@ export function RoomHeader({
 	presence,
 	connection,
 	agentState,
+	usage,
 }: {
+	usage: SessionUsage | null;
 	session: SessionDetail;
 	presence: PresenceMember[];
 	connection: ConnectionStatus;
@@ -69,7 +73,12 @@ export function RoomHeader({
 					{session.goal}
 				</p>
 			</div>
-			<div className="flex items-center gap-2">
+			<div className="flex flex-wrap items-center gap-2">
+				<SessionSettings
+					session={session}
+					usage={usage}
+					canChange={can(me, 'changeSettings') && session.status !== 'DONE'}
+				/>
 				<MembersPopover session={session} presence={presence} />
 				<Can member={me} action="handOff">
 					<Button size="sm" variant="ghost" onClick={() => setHandingOff(true)}>

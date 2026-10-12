@@ -207,6 +207,26 @@ export class ApprovalService {
 			throw new ConflictException('This session has ended');
 		}
 		const kind = approval.kind as ApprovalKind;
+		// An approved budget gate raises the session's cap by what it asked for.
+		if (kind === ApprovalKind.BUDGET && approved) {
+			const extra =
+				Number(
+					(approval.details as { extraTokens?: number } | null)?.extraTokens,
+				) || 0;
+			const current = await tx.session.findUniqueOrThrow({
+				where: { id: sessionId },
+				select: { tokenBudget: true, tokensUsed: true },
+			});
+			if (current.tokenBudget !== null) {
+				await tx.session.update({
+					where: { id: sessionId },
+					data: {
+						tokenBudget:
+							Math.max(current.tokenBudget, current.tokensUsed) + extra,
+					},
+				});
+			}
+		}
 		// A rejected step gate drops that step; the rest of the plan goes on.
 		if (kind === ApprovalKind.CUSTOM && !approved && approval.planStepId) {
 			await tx.planStep.updateMany({

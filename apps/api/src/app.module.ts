@@ -23,6 +23,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { SessionModule } from './session/session.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { UserModule } from './user/user.module';
+import { WorkspaceModule } from './workspace/workspace.module';
 
 @Module({
 	imports: [
@@ -55,6 +56,7 @@ import { UserModule } from './user/user.module';
 		PlanModule,
 		CatchUpModule,
 		HandoffModule,
+		WorkspaceModule,
 		AgentModule,
 	],
 	providers: [

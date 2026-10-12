@@ -118,6 +118,7 @@ export function SessionRoomPage() {
 				presence={live.presence}
 				connection={live.status}
 				agentState={live.agent?.state ?? (s.agentState as AgentState)}
+				usage={live.usage}
 			/>
 			<ApprovalBar session={s} me={me} />
 			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">

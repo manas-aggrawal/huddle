@@ -22,6 +22,8 @@ export const SocketEvent = {
 	PRESENCE_STATE: 'presence:state',
 	/** Server → client: what the agent is doing right now (thinking, researching, writing, idle). */
 	AGENT_STATE: 'session:agent-state',
+	/** Server → client: token usage after each model call, for the budget meter. */
+	USAGE: 'session:usage',
 } as const;
 
 /** Most events a single join replays. If `hasMore`, join again with the last seq you got. */
@@ -104,6 +106,14 @@ export interface AgentStateChanged {
 	stepId: string | null;
 }
 
+export interface SessionUsage {
+	sessionId: string;
+	tokensUsed: number;
+	/** null = no cap */
+	tokenBudget: number | null;
+	workspace: { tokensUsedThisPeriod: number; tokenAllowance: number };
+}
+
 export interface ClientToServerEvents {
 	'session:join': (
 		req: SessionJoinRequest,
@@ -122,6 +132,7 @@ export interface ServerToClientEvents {
 	'presence:changed': (change: PresenceChanged) => void;
 	'session:removed': (msg: SessionRemoved) => void;
 	'session:agent-state': (state: AgentStateChanged) => void;
+	'session:usage': (usage: SessionUsage) => void;
 }
 
 /** Socket.IO room name for a session. */

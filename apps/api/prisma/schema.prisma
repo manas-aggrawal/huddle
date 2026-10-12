@@ -379,7 +379,7 @@ model Notification {
   id        String    @id @default(uuid())
   userId    String
   sessionId String
-  /// NotificationType (@huddle/shared): APPROVAL_REQUESTED | QUESTION_FOR_YOU | MENTION | CONFLICT_RAISED | HANDOFF_RECEIVED
+  /// NotificationType (@huddle/shared): APPROVAL_REQUESTED | QUESTION_FOR_YOU | MENTION | CONFLICT_RAISED | HANDOFF_RECEIVED | POOL_EXHAUSTED
   type      String    @db.VarChar(22)
   title     String    @db.VarChar(200)
   /// Id of the Approval / Message / Conflict / Handoff it points to
