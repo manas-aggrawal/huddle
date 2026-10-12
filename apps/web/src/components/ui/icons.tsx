@@ -81,3 +81,26 @@ export const BotIcon = (p: IconProps) => (
 		<path d="M12 4v4M9 14h.01M15 14h.01" />
 	</Svg>
 );
+
+export const GripIcon = (p: IconProps) => (
+	<Svg {...p}>
+		<circle cx="9" cy="6" r="1" />
+		<circle cx="15" cy="6" r="1" />
+		<circle cx="9" cy="12" r="1" />
+		<circle cx="15" cy="12" r="1" />
+		<circle cx="9" cy="18" r="1" />
+		<circle cx="15" cy="18" r="1" />
+	</Svg>
+);
+export const MoreIcon = (p: IconProps) => (
+	<Svg {...p}>
+		<circle cx="5" cy="12" r="1" />
+		<circle cx="12" cy="12" r="1" />
+		<circle cx="19" cy="12" r="1" />
+	</Svg>
+);
+export const PlusIcon = (p: IconProps) => (
+	<Svg {...p}>
+		<path d="M12 5v14M5 12h14" />
+	</Svg>
+);

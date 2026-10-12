@@ -169,6 +169,10 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 			case EventType.CONFLICT_RESOLVED:
 				this.wake(event.sessionId);
 				break;
+			case EventType.PLAN_UPDATED:
+				// A person changed the plan: picked up at the next step (or now, if idle).
+				if (event.actorType === ActorType.USER) this.wake(event.sessionId);
+				break;
 			case EventType.STATUS_CHANGED:
 				if (
 					payload.to === SessionStatus.PAUSED ||

@@ -102,6 +102,8 @@ export function SessionRoomPage() {
 			<ApprovalBar session={s} me={me} />
 			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
 				<PlanPane
+					sessionId={s.id}
+					canEdit={can(me, 'editPlan') && s.status !== SessionStatus.DONE}
 					steps={s.planSteps}
 					footer={
 						<PinnedDecisions
