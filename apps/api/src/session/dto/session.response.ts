@@ -35,6 +35,12 @@ export class SessionDto extends createZodDto(SessionSchema) {}
 export const SessionListItemSchema = SessionSchema.extend({
 	myRole: z.enum(SessionRole),
 	memberCount: z.number().int(),
+	owner: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+	/** Up to 5 members, Owner first, for the avatars. */
+	memberPreview: z.array(z.object({ userId: z.uuid(), name: z.string() })),
+	/** Unread notifications, or approvals you can answer. */
+	waitingOnMe: z.boolean(),
+	unreadCount: z.number().int(),
 });
 export class SessionListItemDto extends createZodDto(SessionListItemSchema) {}
 

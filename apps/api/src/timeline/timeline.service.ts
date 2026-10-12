@@ -41,6 +41,11 @@ export class TimelineService {
 		TimelineEvent[]
 	>();
 	private readonly listeners = new Set<CommittedListener>();
+	/** Callbacks to run once each open timeline transaction commits. */
+	private readonly afterCommits = new WeakMap<
+		Prisma.TransactionClient,
+		(() => void)[]
+	>();
 
 	constructor(private readonly prisma: PrismaService) {}
 
@@ -53,13 +58,34 @@ export class TimelineService {
 		fn: (tx: Prisma.TransactionClient) => Promise<T>,
 	): Promise<T> {
 		let events: TimelineEvent[] = [];
+		let callbacks: (() => void)[] = [];
 		const result = await this.prisma.$transaction(async (tx) => {
 			events = [];
+			callbacks = [];
 			this.pending.set(tx, events);
+			this.afterCommits.set(tx, callbacks);
 			return fn(tx);
 		});
 		for (const event of events) this.announce(event);
+		for (const cb of callbacks) {
+			try {
+				cb();
+			} catch (error) {
+				this.logger.error('After-commit callback failed', error);
+			}
+		}
 		return result;
+	}
+
+	/** Runs `fn` after the timeline transaction `tx` commits (never on rollback). */
+	afterCommit(tx: Prisma.TransactionClient, fn: () => void) {
+		const queue = this.afterCommits.get(tx);
+		if (!queue) {
+			throw new Error(
+				'timeline.afterCommit must run inside timeline.transaction()',
+			);
+		}
+		queue.push(fn);
 	}
 
 	/** Called with every committed event. Returns a function that unsubscribes. */

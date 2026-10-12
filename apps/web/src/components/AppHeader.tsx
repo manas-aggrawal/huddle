@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { fullName, useAuth } from '../lib/auth';
+import { Inbox } from './Inbox';
 import { Avatar, Button, ThemeToggle } from './ui';
 
 export function Logo() {
@@ -27,6 +28,7 @@ export function AppHeader() {
 				<Logo />
 				<div className="flex items-center gap-1 sm:gap-2">
 					<ThemeToggle />
+					{user && <Inbox />}
 					{user && (
 						<span className="hidden items-center gap-2 text-sm sm:flex">
 							<Avatar userId={user.id} name={fullName(user)} size="sm" />

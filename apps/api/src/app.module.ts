@@ -17,6 +17,7 @@ import { LlmModule } from './llm/llm.module';
 import { MessageModule } from './message/message.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { ModelsModule } from './models/models.module';
+import { NotificationModule } from './notification/notification.module';
 import { PlanModule } from './plan/plan.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
@@ -57,6 +58,7 @@ import { WorkspaceModule } from './workspace/workspace.module';
 		CatchUpModule,
 		HandoffModule,
 		WorkspaceModule,
+		NotificationModule,
 		AgentModule,
 	],
 	providers: [

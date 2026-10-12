@@ -10,12 +10,14 @@ import {
 	SocketError,
 	SocketEvent,
 	sessionRoom,
+	userRoom,
 } from '@huddle/shared';
 import { Logger, OnModuleDestroy } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {
 	ConnectedSocket,
 	MessageBody,
+	OnGatewayConnection,
 	OnGatewayDisconnect,
 	OnGatewayInit,
 	SubscribeMessage,
@@ -93,7 +95,11 @@ const error = (status: number, message: string): SocketError => ({
 	},
 })
 export class SessionGateway
-	implements OnGatewayInit, OnGatewayDisconnect, OnModuleDestroy
+	implements
+		OnGatewayInit,
+		OnGatewayConnection,
+		OnGatewayDisconnect,
+		OnModuleDestroy
 {
 	@WebSocketServer() server!: HuddleServer;
 	private readonly logger = new Logger(SessionGateway.name);
@@ -214,6 +220,11 @@ export class SessionGateway
 			sessionId,
 			member,
 		});
+	}
+
+	/** Every socket of a user joins their personal room, for inbox updates. */
+	handleConnection(socket: HuddleSocket) {
+		if (socket.data.user) void socket.join(userRoom(socket.data.user.id));
 	}
 
 	handleDisconnect(socket: HuddleSocket) {

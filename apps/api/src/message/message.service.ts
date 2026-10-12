@@ -17,6 +17,7 @@ import {
 	Injectable,
 } from '@nestjs/common';
 import { Message, Prisma, SessionMember } from '@prisma/client';
+import { NotificationService } from '@src/realtime/notification.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import { CreateMessageDto, MessageDto } from './dto/message.dto';
 
@@ -46,7 +47,10 @@ export function toMessageDto(m: Message): MessageDto {
 /** People's input to the agent: saved as a Message and announced on the timeline. */
 @Injectable()
 export class MessageService {
-	constructor(private readonly timeline: TimelineService) {}
+	constructor(
+		private readonly timeline: TimelineService,
+		private readonly notifications: NotificationService,
+	) {}
 
 	async create(
 		membership: SessionMember,
@@ -135,14 +139,15 @@ export class MessageService {
 			where: { sessionId, userId: { in: ids } },
 			select: { userId: true },
 		});
-		await tx.notification.createMany({
-			data: members.map((m) => ({
+		await this.notifications.create(
+			tx,
+			members.map((m) => ({
 				userId: m.userId,
 				sessionId,
 				type: NotificationType.MENTION,
-				title: `${authorName} mentioned you`.slice(0, 200),
+				title: `${authorName} mentioned you`,
 				refId: message.id,
 			})),
-		});
+		);
 	}
 }
