@@ -3,7 +3,7 @@
 // Typed clients: io(...) as Socket<ServerToClientEvents, ClientToServerEvents>.
 
 import type { SessionRole } from './roles';
-import type { ActorType, EventType } from './values';
+import type { ActorType, AgentState, EventType } from './values';
 
 export const SocketEvent = {
 	/** Client → server, with an ack: join a session's room and catch up. */
@@ -20,6 +20,8 @@ export const SocketEvent = {
 	PRESENCE_CHANGED: 'presence:changed',
 	/** Server → client: the full list of who's online, after anyone joins or leaves. */
 	PRESENCE_STATE: 'presence:state',
+	/** Server → client: what the agent is doing right now (thinking, researching, writing, idle). */
+	AGENT_STATE: 'session:agent-state',
 } as const;
 
 /** Most events a single join replays. If `hasMore`, join again with the last seq you got. */
@@ -95,6 +97,13 @@ export interface SessionRemoved {
 	reason: 'removed';
 }
 
+export interface AgentStateChanged {
+	sessionId: string;
+	agentState: AgentState;
+	/** The plan step it's working on, if any. */
+	stepId: string | null;
+}
+
 export interface ClientToServerEvents {
 	'session:join': (
 		req: SessionJoinRequest,
@@ -112,6 +121,7 @@ export interface ServerToClientEvents {
 	'presence:state': (state: PresenceState) => void;
 	'presence:changed': (change: PresenceChanged) => void;
 	'session:removed': (msg: SessionRemoved) => void;
+	'session:agent-state': (state: AgentStateChanged) => void;
 }
 
 /** Socket.IO room name for a session. */

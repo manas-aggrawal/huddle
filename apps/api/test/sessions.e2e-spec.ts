@@ -334,7 +334,11 @@ describe('Sessions API', () => {
 			const res = await ctx
 				.as('maya')
 				.post('/sessions')
-				.send(body({ context: '  Focus on pricing. See https://obsidian.md/pricing  ' }))
+				.send(
+					body({
+						context: '  Focus on pricing. See https://obsidian.md/pricing  ',
+					}),
+				)
 				.expect(201);
 			expect(res.body.lastEventSeq).toBe(2);
 
@@ -406,7 +410,9 @@ describe('Sessions API', () => {
 			await ctx
 				.as('maya')
 				.post('/sessions')
-				.send(body({ modelProvider: 'groq', modelId: 'llama-3.3-70b-versatile' }))
+				.send(
+					body({ modelProvider: 'groq', modelId: 'llama-3.3-70b-versatile' }),
+				)
 				.expect(201);
 			await ctx.http.get('/models').expect(401);
 		});

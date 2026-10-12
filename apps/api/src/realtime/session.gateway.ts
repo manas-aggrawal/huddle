@@ -38,6 +38,7 @@ import {
 } from '@src/timeline/timeline.service';
 import { Server, Socket } from 'socket.io';
 import { z } from 'zod';
+import { BroadcastService } from './broadcast.service';
 import { PresenceService } from './presence.service';
 
 interface SocketData {
@@ -103,9 +104,11 @@ export class SessionGateway
 		private readonly prisma: PrismaService,
 		private readonly timeline: TimelineService,
 		private readonly presence: PresenceService,
+		private readonly broadcast: BroadcastService,
 	) {}
 
 	afterInit(server: HuddleServer) {
+		this.broadcast.attach(server as unknown as Server);
 		// Log in during the handshake: no valid access token, no connection.
 		server.use(async (socket, next) => {
 			const token = socket.handshake.auth?.token;

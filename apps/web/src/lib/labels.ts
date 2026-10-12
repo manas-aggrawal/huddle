@@ -1,4 +1,4 @@
-import { SessionRole, SessionStatus } from '@huddle/shared';
+import { AgentState, SessionRole, SessionStatus } from '@huddle/shared';
 import type { BadgeTone } from '../components/ui';
 
 export const STATUS_LABEL: Record<
@@ -10,6 +10,14 @@ export const STATUS_LABEL: Record<
 	[SessionStatus.WAITING]: { label: 'Waiting on you', tone: 'warn' },
 	[SessionStatus.PAUSED]: { label: 'Paused', tone: 'neutral' },
 	[SessionStatus.DONE]: { label: 'Done', tone: 'neutral' },
+};
+
+/** What the agent is doing, for the header. Idle shows nothing. */
+export const AGENT_LABEL: Record<AgentState, string | null> = {
+	[AgentState.IDLE]: null,
+	[AgentState.THINKING]: 'Thinking…',
+	[AgentState.RESEARCHING]: 'Researching…',
+	[AgentState.WRITING]: 'Writing…',
 };
 
 export const ROLE_LABEL: Record<SessionRole, string> = {
