@@ -180,3 +180,29 @@ export function askPrompt(input: {
 		`Answer ${input.question.author.split(' ')[0]} directly in 1 to 4 sentences. This is a question, not an instruction: don't promise to change the plan. Plain text, no markdown.`,
 	);
 }
+
+export function replanPrompt(input: {
+	goal: string;
+	steps: PlanStepBrief[];
+	decisions: string[];
+	interrupt: TeamInput;
+	/** The section that was being written when the interrupt came, and what it had so far. */
+	interrupted?: { title: string; text: string };
+}): string {
+	const first = input.interrupt.author.split(' ')[0];
+	return join(
+		`Goal of the document: ${input.goal}`,
+		`Current plan:\n${numberedPlan(input.steps)}`,
+		decisionsBlock(input.decisions),
+		input.interrupted
+			? `You were writing "${input.interrupted.title}" and stopped here:\n"""\n${input.interrupted.text.slice(-1500)}\n"""`
+			: '',
+		`${input.interrupt.author} (${input.interrupt.role.toLowerCase()}) interrupted you: ${input.interrupt.content}`,
+		`Change the plan so the rest of the work follows ${first}'s instruction. Text already written stays; a stopped step can be edited, moved or removed like any not-started step. Reply to ${first} in one sentence saying what you changed.
+
+${PLAN_OPS_HELP}
+
+Reply with only JSON in this exact shape:
+{"reply":"...","planOps":[]}`,
+	);
+}

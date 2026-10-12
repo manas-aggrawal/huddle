@@ -106,7 +106,16 @@ export function describeEvent(e: TimelineEventDto): {
 				return { text: 'drafted an outline', detail: added.join(' · ') };
 			if (p.reason === 'revised')
 				return { text: 'revised the outline', detail: added.join(' · ') };
-			return { text: 'updated the plan', detail: str(p.summary) };
+			const by = nameOf(p.by);
+			if (p.reason === 'interrupt')
+				return {
+					text: by ? `replanned after ${by}’s interrupt` : 'replanned',
+					detail: str(p.summary),
+				};
+			return {
+				text: by ? `updated the plan for ${by}` : 'updated the plan',
+				detail: str(p.summary),
+			};
 		}
 		case EventType.TOOL_CALL:
 			return {

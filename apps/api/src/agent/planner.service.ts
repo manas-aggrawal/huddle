@@ -55,6 +55,7 @@ export class PlannerService {
 		const queued = await this.context.queuedInput(sessionId, [
 			MessageMode.SUGGEST,
 			MessageMode.COMMENT,
+			MessageMode.INTERRUPT,
 		]);
 		const decisions = await this.context.activeDecisions(sessionId);
 		const rejected = await this.lastRejectedOutline(sessionId);
