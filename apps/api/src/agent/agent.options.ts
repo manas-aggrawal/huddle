@@ -4,6 +4,8 @@ export interface AgentOptions {
 	enabled: boolean;
 	/** How often streamed text is written into the doc, in ms. */
 	flushMs: number;
+	/** Research with tools (web search, reading pages) before writing each section. */
+	research: boolean;
 }
 
 export const AGENT_OPTIONS = Symbol('AGENT_OPTIONS');
@@ -11,4 +13,5 @@ export const AGENT_OPTIONS = Symbol('AGENT_OPTIONS');
 export const defaultAgentOptions = (): AgentOptions => ({
 	enabled: process.env.AGENT_ENABLED !== 'false',
 	flushMs: Number(process.env.AGENT_FLUSH_MS) || 150,
+	research: process.env.AGENT_RESEARCH !== 'false',
 });

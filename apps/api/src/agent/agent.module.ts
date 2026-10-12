@@ -4,6 +4,7 @@ import { CollabModule } from '@src/collab/collab.module';
 import { ConflictModule } from '@src/conflict/conflict.module';
 import { LlmModule } from '@src/llm/llm.module';
 import { RealtimeModule } from '@src/realtime/realtime.module';
+import { ResearchModule } from '@src/research/research.module';
 import { TimelineModule } from '@src/timeline/timeline.module';
 import { AGENT_OPTIONS, defaultAgentOptions } from './agent.options';
 import { AgentContextService } from './agent-context.service';
@@ -13,6 +14,7 @@ import { AskResponderService } from './ask-responder.service';
 import { PlannerService } from './planner.service';
 import { QueueProcessorService } from './queue-processor.service';
 import { ReplannerService } from './replanner.service';
+import { ResearchService } from './research.service';
 import { RewriteService } from './rewrite.service';
 import { SectionWriterService } from './section-writer.service';
 
@@ -24,6 +26,7 @@ import { SectionWriterService } from './section-writer.service';
 		RealtimeModule,
 		ApprovalModule,
 		ConflictModule,
+		ResearchModule,
 	],
 	providers: [
 		{ provide: AGENT_OPTIONS, useFactory: defaultAgentOptions },
@@ -36,6 +39,7 @@ import { SectionWriterService } from './section-writer.service';
 		AskResponderService,
 		ReplannerService,
 		RewriteService,
+		ResearchService,
 	],
 	exports: [AgentRunner],
 })

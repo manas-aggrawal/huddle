@@ -30,7 +30,7 @@ This is an npm workspaces monorepo. Each app builds and runs on its own. They sh
 nvm use
 npm install                                   # installs every workspace and generates the Prisma client
 cp apps/api/.env.example apps/api/.env
-cd apps/api && docker compose up -d db && cd ../..   # Postgres on localhost:5432
+cd apps/api && docker compose up -d db searxng && cd ../..   # Postgres on :5432, web search on :8080
 npm run migrate -w @huddle/api                # apply database migrations
 npm run dev
 ```

@@ -11,6 +11,17 @@ services:
       - "${PORT_DATABASE}:5432"
     volumes:
       - db:/var/lib/postgresql/data
+  # Web search for the agent (web_search tool). JSON API on http://localhost:8080/search?q=…&format=json
+  searxng:
+    # Pinned: SearXNG publishes date-stamped builds.
+    image: searxng/searxng:2026.10.11-ad46ebd7d
+    restart: always
+    ports:
+      - "${SEARXNG_PORT:-8080}:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8080}/
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
   # Optional: run the API in a container instead of `npm run dev` on your machine.
   api:
     build:

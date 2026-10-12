@@ -11,6 +11,7 @@ import { AgentContextService } from './agent-context.service';
 import { AgentRun } from './agent-run';
 import { AgentStateService } from './agent-state.service';
 import { AGENT_SYSTEM, sectionPrompt } from './prompts';
+import { type ResearchResult, ResearchService } from './research.service';
 
 const EXCERPT_CHARS = 500;
 
@@ -67,6 +68,7 @@ export class SectionWriterService {
 		private readonly doc: AgentDocWriter,
 		private readonly agentState: AgentStateService,
 		private readonly context: AgentContextService,
+		private readonly researcher: ResearchService,
 		@Inject(AGENT_OPTIONS) private readonly options: AgentOptions,
 	) {}
 
@@ -76,6 +78,11 @@ export class SectionWriterService {
 		const started = await this.start(sessionId, step);
 		const sectionId = started.sectionId as string;
 		await this.ensureSection(sessionId, started);
+		let research: ResearchResult | undefined;
+		if (this.options.research) {
+			research = await this.researcher.research(run, started);
+			if (run.aborted) return false;
+		}
 		await this.agentState.set(sessionId, AgentState.THINKING, step.id);
 
 		const [session, steps, decisions, sections, guidance] = await Promise.all([
@@ -118,6 +125,7 @@ export class SectionWriterService {
 					})),
 				existing,
 				humanText,
+				research,
 			}),
 			abortSignal: run.signal,
 		});
