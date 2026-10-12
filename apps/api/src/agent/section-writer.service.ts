@@ -78,7 +78,7 @@ export class SectionWriterService {
 		await this.ensureSection(sessionId, started);
 		await this.agentState.set(sessionId, AgentState.THINKING, step.id);
 
-		const [session, steps, decisions, sections] = await Promise.all([
+		const [session, steps, decisions, sections, guidance] = await Promise.all([
 			this.prisma.session.findUniqueOrThrow({ where: { id: sessionId } }),
 			this.prisma.planStep.findMany({
 				where: { sessionId, status: { not: StepStatus.SKIPPED } },
@@ -86,6 +86,7 @@ export class SectionWriterService {
 			}),
 			this.context.activeDecisions(sessionId),
 			this.doc.listSections(sessionId),
+			this.context.guidance(sessionId),
 		]);
 		const doneSections = new Set(
 			steps
@@ -104,6 +105,7 @@ export class SectionWriterService {
 				steps,
 				step: started,
 				decisions,
+				guidance,
 				previous: sections
 					.filter((s) => doneSections.has(s.sectionId))
 					.map((s) => ({

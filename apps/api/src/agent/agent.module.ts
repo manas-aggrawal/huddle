@@ -8,7 +8,9 @@ import { AGENT_OPTIONS, defaultAgentOptions } from './agent.options';
 import { AgentContextService } from './agent-context.service';
 import { AgentRunner } from './agent-runner.service';
 import { AgentStateService } from './agent-state.service';
+import { AskResponderService } from './ask-responder.service';
 import { PlannerService } from './planner.service';
+import { QueueProcessorService } from './queue-processor.service';
 import { SectionWriterService } from './section-writer.service';
 
 @Module({
@@ -26,6 +28,8 @@ import { SectionWriterService } from './section-writer.service';
 		AgentContextService,
 		PlannerService,
 		SectionWriterService,
+		QueueProcessorService,
+		AskResponderService,
 	],
 	exports: [AgentRunner],
 })

@@ -49,6 +49,25 @@ export class AgentContextService {
 		}));
 	}
 
+	/** Suggestions the agent agreed to follow, so later sections keep following them. */
+	async guidance(sessionId: string): Promise<TeamInput[]> {
+		const messages = await this.prisma.message.findMany({
+			where: {
+				sessionId,
+				status: MessageStatus.APPLIED,
+				mode: { in: [MessageMode.SUGGEST, MessageMode.INTERRUPT] },
+			},
+			orderBy: { createdAt: 'asc' },
+			include: { author: { select: { firstname: true, lastname: true } } },
+		});
+		const roles = await this.roles(sessionId);
+		return messages.map((m) => ({
+			author: `${m.author.firstname} ${m.author.lastname}`.trim(),
+			role: roles.get(m.authorId) ?? 'former member',
+			content: m.content,
+		}));
+	}
+
 	async roles(sessionId: string): Promise<Map<string, string>> {
 		const members = await this.prisma.sessionMember.findMany({
 			where: { sessionId },

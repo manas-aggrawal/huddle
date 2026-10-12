@@ -77,8 +77,17 @@ export function describeEvent(e: TimelineEventDto): {
 				detail: str(p.content),
 			};
 		}
-		case EventType.AGENT_MESSAGE:
-			return { text: 'said', detail: str(p.text) ?? str(p.content) };
+		case EventType.AGENT_MESSAGE: {
+			const to = nameOf(p.to);
+			return {
+				text: to
+					? `answered ${to}`
+					: p.kind === 'error'
+						? 'ran into a problem'
+						: 'said',
+				detail: str(p.text) ?? str(p.content),
+			};
+		}
 		case EventType.AGENT_ACK: {
 			const who = nameOf(p.author);
 			return {

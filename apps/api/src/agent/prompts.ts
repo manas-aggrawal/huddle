@@ -67,11 +67,19 @@ Reply with only JSON in this exact shape:
 	);
 }
 
+export function guidanceBlock(guidance: TeamInput[]): string {
+	return guidance.length
+		? `Guidance from the team you agreed to follow:\n${bullets(guidance.map((g) => `${g.author}: ${g.content}`))}`
+		: '';
+}
+
 export function sectionPrompt(input: {
 	goal: string;
 	steps: PlanStepBrief[];
 	step: PlanStepBrief;
 	decisions: string[];
+	/** Suggestions the agent applied earlier. */
+	guidance: TeamInput[];
 	/** Earlier sections, shortened. */
 	previous: { title: string; excerpt: string }[];
 	/** Text already in this section (a person's edits, or a write that was cut off). */
@@ -82,6 +90,7 @@ export function sectionPrompt(input: {
 		`Goal of the document: ${input.goal}`,
 		`Outline:\n${outlineBlock(input.steps, step.position)}`,
 		decisionsBlock(input.decisions),
+		guidanceBlock(input.guidance),
 		input.previous.length
 			? `Earlier sections (shortened):\n${input.previous.map((p) => `## ${p.title}\n${p.excerpt}`).join('\n\n')}`
 			: '',
@@ -92,5 +101,82 @@ export function sectionPrompt(input: {
 - 2 to 4 paragraphs of plain prose, separated by blank lines.
 - No heading, no title line, no markdown headers or bold.
 - Don't repeat what earlier sections already said.`,
+	);
+}
+
+const statusWord: Record<string, string> = {
+	DONE: 'done',
+	IN_PROGRESS: 'writing now',
+	PENDING: 'not started',
+	BLOCKED: 'blocked',
+	SKIPPED: 'skipped',
+};
+
+/** The plan with numbers and statuses, as the model refers to it in plan ops. */
+export function numberedPlan(steps: PlanStepBrief[]): string {
+	return steps
+		.map(
+			(s, i) =>
+				`${i + 1}. [${statusWord[s.status ?? 'PENDING'] ?? s.status}] ${s.title}${s.description ? ` — ${s.description}` : ''}`,
+		)
+		.join('\n');
+}
+
+const PLAN_OPS_HELP = `Plan operations (only steps that are "not started" or "blocked" can change; refer to steps by number):
+{"op":"add","title":"...","description":"...","after":N}   (after: step number to insert after, 0 = first, omit = last)
+{"op":"edit","position":N,"title":"...","description":"..."}
+{"op":"remove","position":N}
+{"op":"move","position":N,"after":M}`;
+
+export function queuePrompt(input: {
+	goal: string;
+	steps: PlanStepBrief[];
+	decisions: string[];
+	messages: (TeamInput & {
+		messageId: string;
+		mode: string;
+		quote?: string;
+		section?: string;
+	})[];
+}): string {
+	return join(
+		`Goal of the document: ${input.goal}`,
+		`Current plan:\n${numberedPlan(input.steps)}`,
+		decisionsBlock(input.decisions),
+		`New input from the team, oldest first:\n${input.messages
+			.map(
+				(m) =>
+					`- id ${m.messageId} | ${m.author} (${m.role.toLowerCase()}) ${m.mode === 'COMMENT' ? `commented on "${m.quote ?? ''}"${m.section ? ` in "${m.section}"` : ''}` : 'suggested'}: ${m.content}`,
+			)
+			.join('\n')}`,
+		`Decide what to do with each input:
+- "apply": follow it in the sections you still have to write.
+- "plan_change": change the plan (give planOps).
+- "decline": don't follow it; say why politely.
+Reply to each person by first name, briefly, like a helpful teammate ("Got it, Leo — I'll add UX notes to each profile.").
+
+${PLAN_OPS_HELP}
+
+Reply with only JSON in this exact shape:
+{"decisions":[{"messageId":"...","decision":"apply","reply":"...","planOps":[]}]}`,
+	);
+}
+
+export function askPrompt(input: {
+	goal: string;
+	steps: PlanStepBrief[];
+	decisions: string[];
+	sections: { title: string; excerpt: string }[];
+	question: TeamInput;
+}): string {
+	return join(
+		`Goal of the document: ${input.goal}`,
+		`Plan:\n${numberedPlan(input.steps)}`,
+		decisionsBlock(input.decisions),
+		input.sections.length
+			? `The document so far (shortened):\n${input.sections.map((s) => `## ${s.title}\n${s.excerpt}`).join('\n\n')}`
+			: 'The document is still empty.',
+		`${input.question.author} (${input.question.role.toLowerCase()}) asks: ${input.question.content}`,
+		`Answer ${input.question.author.split(' ')[0]} directly in 1 to 4 sentences. This is a question, not an instruction: don't promise to change the plan. Plain text, no markdown.`,
 	);
 }
