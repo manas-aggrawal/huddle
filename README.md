@@ -81,7 +81,7 @@ Token budgets: each workspace has a shared monthly pool (2M tokens by default); 
 
 ## Demo script (3 minutes, three browsers)
 
-`npm run seed:demo -w @huddle/api` creates **maya**, **leo**, **raj** and **dana** (password `Huddle@2026`). Use `-- --reset` before a re-run to wipe their sessions. Log in as each in a separate browser profile or private window.
+`npm run seed:demo -w @huddle/api` creates **mayachen**, **leopark**, **rajmehta** and **danasilva** (password `Huddle@2026`; you can also log in with `maya@huddle.demo` and so on). Use `-- --reset` before a re-run to wipe their sessions. Log in as each in a separate browser profile or private window.
 
 1. **Maya** creates *“Competitive analysis of the top 5 note-taking apps”*. The outline appears in the plan; she approves it and the agent starts researching and writing, live.
 2. Maya clicks **Invite** and sends an Editor link to **Leo** and **Raj**, and a Viewer link to **Dana**.
