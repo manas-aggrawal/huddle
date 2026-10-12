@@ -9,11 +9,12 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 const PASSWORD = 'Huddle@2026';
 
+// Usernames need 5+ characters to pass the login rules. Emails stay short.
 const PEOPLE = [
-	{ username: 'maya', firstname: 'Maya', lastname: 'Chen', note: 'PM, creates and owns the session' },
-	{ username: 'leo', firstname: 'Leo', lastname: 'Park', note: 'designer, joins as Editor' },
-	{ username: 'raj', firstname: 'Raj', lastname: 'Mehta', note: 'engineer, joins as Editor' },
-	{ username: 'dana', firstname: 'Dana', lastname: 'Silva', note: 'stakeholder, joins as Viewer' },
+	{ username: 'mayachen', email: 'maya', firstname: 'Maya', lastname: 'Chen', note: 'PM, creates and owns the session' },
+	{ username: 'leopark', email: 'leo', firstname: 'Leo', lastname: 'Park', note: 'designer, joins as Editor' },
+	{ username: 'rajmehta', email: 'raj', firstname: 'Raj', lastname: 'Mehta', note: 'engineer, joins as Editor' },
+	{ username: 'danasilva', email: 'dana', firstname: 'Dana', lastname: 'Silva', note: 'stakeholder, joins as Viewer' },
 ];
 
 async function main() {
@@ -21,9 +22,15 @@ async function main() {
 	const password = await bcrypt.hash(PASSWORD, 10);
 
 	for (const p of PEOPLE) {
-		const email = `${p.username}@huddle.demo`;
-		const existing = await prisma.user.findUnique({ where: { username: p.username } });
-		if (existing) continue;
+		const email = `${p.email}@huddle.demo`;
+		const existing = await prisma.user.findUnique({ where: { email } });
+		if (existing) {
+			// Renames users made by an older seed, whose usernames were too short to log in with.
+			if (existing.username !== p.username) {
+				await prisma.user.update({ where: { id: existing.id }, data: { username: p.username } });
+			}
+			continue;
+		}
 		await prisma.user.create({
 			data: {
 				username: p.username,
@@ -43,7 +50,7 @@ async function main() {
 
 	if (reset) {
 		const users = await prisma.user.findMany({
-			where: { username: { in: PEOPLE.map((p) => p.username) } },
+			where: { email: { in: PEOPLE.map((p) => `${p.email}@huddle.demo`) } },
 			select: { id: true },
 		});
 		const { count } = await prisma.session.deleteMany({
@@ -58,7 +65,7 @@ async function main() {
 	}
 
 	console.log('\nDemo users (password for all: %s):', PASSWORD);
-	for (const p of PEOPLE) console.log(`  ${p.username.padEnd(5)} ${p.firstname} ${p.lastname}, ${p.note}`);
+	for (const p of PEOPLE) console.log(`  ${p.username.padEnd(10)} ${p.firstname} ${p.lastname}, ${p.note}`);
 	console.log('\nLog in as each in its own browser profile (or a private window), then follow');
 	console.log('“Demo script” in the README.');
 }
