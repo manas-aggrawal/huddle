@@ -272,7 +272,7 @@ describe('Sessions API', () => {
 			expect(events.map((e) => e.seq)).toEqual([2, 3, 4]);
 		});
 
-		it('resumes to WAITING when an approval is pending, and to RUNNING when the plan exists', async () => {
+		it('resumes to WAITING when a blocking approval is pending, and to RUNNING when the plan exists', async () => {
 			const s = await mayaSession();
 			await testPrisma.planStep.create({
 				data: { sessionId: s.id, position: 1, title: 'Notion' },
@@ -290,8 +290,8 @@ describe('Sessions API', () => {
 			await testPrisma.approval.create({
 				data: {
 					sessionId: s.id,
-					kind: 'CUSTOM',
-					title: 'Write the Notion section?',
+					kind: 'MARK_FINAL',
+					title: 'Mark the document final',
 				},
 			});
 			await status('pause');
