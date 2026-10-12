@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { ActorType, AgentState, EventType, StepStatus } from '@huddle/shared';
+import {
+	ActorType,
+	AgentState,
+	EventType,
+	SOURCES_SECTION_ID,
+	StepStatus,
+} from '@huddle/shared';
 import { Inject, Injectable } from '@nestjs/common';
 import { PlanStep } from '@prisma/client';
 import { AgentDocWriter } from '@src/collab/agent-doc-writer.service';
@@ -170,7 +176,20 @@ export class SectionWriterService {
 				tx,
 			);
 		});
+		if (research?.sources.length) await this.updateSources(sessionId);
 		return true;
+	}
+
+	/** Rewrites the Sources list at the end of the doc: every page the agent read, numbered. */
+	private async updateSources(sessionId: string) {
+		const sources = await this.prisma.source.findMany({
+			where: { sessionId },
+			orderBy: [{ fetchedAt: 'asc' }, { id: 'asc' }],
+		});
+		await this.doc.setSources(
+			sessionId,
+			sources.map((s, i) => `[${i + 1}] ${s.title ?? s.url} — ${s.url}`),
+		);
 	}
 
 	/** Marks the step IN_PROGRESS (once) and gives it a section id. */
@@ -225,7 +244,8 @@ export class SectionWriterService {
 			.find((s) => present.has(s.sectionId as string));
 		await this.doc.insertSection(sessionId, sectionId, step.title, {
 			after: after?.sectionId,
-			before: before?.sectionId,
+			// The Sources list stays last.
+			before: before?.sectionId ?? SOURCES_SECTION_ID,
 		});
 	}
 }

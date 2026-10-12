@@ -3,6 +3,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PlanStep } from '@prisma/client';
 import { LlmService } from '@src/llm/llm.service';
 import { PrismaService } from '@src/prisma/prisma.service';
+import {
+	PAGE_TEXT_MAX,
+	ScrapeError,
+	ScraperService,
+} from '@src/research/scraper.service';
 import { SearchService } from '@src/research/search.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import { tool } from 'ai';
@@ -39,13 +44,27 @@ export class ResearchService {
 		private readonly timeline: TimelineService,
 		private readonly llm: LlmService,
 		private readonly search: SearchService,
+		private readonly scraper: ScraperService,
 		private readonly agentState: AgentStateService,
 		private readonly context: AgentContextService,
 	) {}
 
 	/** The tools the agent can call while researching one step. */
-	tools(run: AgentRun, step: PlanStep) {
+	tools(
+		run: AgentRun,
+		step: PlanStep,
+		sources: ResearchResult['sources'] = [],
+	) {
 		return {
+			read_page: tool({
+				description:
+					'Read a web page and get its main text, numbered as a source [n] you can cite.',
+				inputSchema: z.object({
+					url: z.string().trim().min(8).max(2000).describe('The page to read'),
+				}),
+				execute: async ({ url }) =>
+					this.readPage(run.sessionId, step, url, sources),
+			}),
 			web_search: tool({
 				description:
 					'Search the web. Returns the top results (title, url, snippet). Use focused queries.',
@@ -87,7 +106,7 @@ export class ResearchService {
 				decisions,
 				guidance,
 			}),
-			tools: this.tools(run, step),
+			tools: this.tools(run, step, sources),
 			abortSignal: run.signal,
 		});
 		return { notes: text, sources };
@@ -125,6 +144,70 @@ export class ResearchService {
 				stepId: step.id,
 			});
 			return `Search failed (${why}). Continue with what you know, and say which facts you couldn't verify.`;
+		}
+	}
+
+	private async readPage(
+		sessionId: string,
+		step: PlanStep,
+		url: string,
+		sources: ResearchResult['sources'],
+	): Promise<string> {
+		await this.agentState.set(sessionId, AgentState.RESEARCHING, step.id);
+		const session = await this.prisma.session.findUniqueOrThrow({
+			where: { id: sessionId },
+			select: { workspaceId: true },
+		});
+		try {
+			const page = await this.scraper.read(url, session.workspaceId);
+			const source = await this.prisma.source.upsert({
+				where: { sessionId_url: { sessionId, url: page.finalUrl } },
+				create: {
+					sessionId,
+					url: page.finalUrl,
+					title: page.title?.slice(0, 300) ?? null,
+				},
+				update: {},
+			});
+			// Numbered in the order pages were first read, like the doc's Sources list.
+			const n =
+				(await this.prisma.source.count({
+					where: {
+						sessionId,
+						OR: [
+							{ fetchedAt: { lt: source.fetchedAt } },
+							{ fetchedAt: source.fetchedAt, id: { lt: source.id } },
+						],
+					},
+				})) + 1;
+			const title = page.title ?? page.finalUrl;
+			if (!sources.some((s) => s.n === n))
+				sources.push({ n, title, url: page.finalUrl });
+			await this.recordCall(sessionId, {
+				tool: 'read_page',
+				url: page.finalUrl,
+				title,
+				chars: page.text.length,
+				source: n,
+				cached: page.fromCache,
+				stepId: step.id,
+			});
+			return `[${n}] ${title} (${page.finalUrl})\n\n${page.text.slice(0, PAGE_TEXT_MAX)}`;
+		} catch (err) {
+			const why =
+				err instanceof ScrapeError
+					? err.message
+					: `Couldn’t read the page: ${(err as Error).message}`;
+			if (!(err instanceof ScrapeError))
+				this.logger.warn(`read_page failed for ${url}: ${why}`);
+			await this.recordCall(sessionId, {
+				tool: 'read_page',
+				url,
+				chars: 0,
+				error: why,
+				stepId: step.id,
+			});
+			return `${why}. Try another source.`;
 		}
 	}
 

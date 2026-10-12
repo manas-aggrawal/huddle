@@ -4,6 +4,7 @@ import {
 	HumanRange,
 	SECTION_HEADING_LEVEL,
 	SECTION_ID_ATTR,
+	SOURCES_SECTION_ID,
 } from '@huddle/shared';
 import {
 	ConflictException,
@@ -80,6 +81,35 @@ export class AgentDocWriter {
 			const before = place.before ? findSection(doc, place.before) : null;
 			const at = after?.end ?? before?.heading ?? fragment.length;
 			fragment.insert(at, [heading, body]);
+		});
+	}
+
+	/**
+	 * Keeps the numbered Sources list at the end of the doc. Rewritten whole
+	 * each time, unless someone typed in it, in which case only new lines are
+	 * added.
+	 */
+	async setSources(sessionId: string, lines: string[]) {
+		if (!(await this.hasSection(sessionId, SOURCES_SECTION_ID))) {
+			await this.insertSection(sessionId, SOURCES_SECTION_ID, 'Sources');
+		}
+		await this.write(sessionId, (doc) => {
+			const bounds = this.require(doc, SOURCES_SECTION_ID);
+			const fragment = fragmentOf(doc);
+			if (humanRanges(doc, bounds).length > 0) {
+				const have = sectionText(doc, bounds);
+				const missing = lines.filter((l) => !have.includes(l));
+				fragment.insert(
+					bounds.end,
+					missing.map((l) => this.newParagraph(l)),
+				);
+				return;
+			}
+			fragment.delete(bounds.heading + 1, bounds.end - bounds.heading - 1);
+			fragment.insert(
+				bounds.heading + 1,
+				(lines.length ? lines : ['']).map((l) => this.newParagraph(l)),
+			);
 		});
 	}
 
