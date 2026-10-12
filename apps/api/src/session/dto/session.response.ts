@@ -50,15 +50,18 @@ export const MemberSchema = z.object({
 
 export class MemberDto extends createZodDto(MemberSchema) {}
 
-const PlanStepSchema = z.object({
+export const PlanStepSchema = z.object({
 	id: z.uuid(),
 	position: z.number().int(),
 	title: z.string(),
-	description: z.string().nullable(),
+	// The max keeps OpenAPI from misreading string|null as an array when this is a top-level response.
+	description: z.string().max(1000).nullable(),
 	status: z.enum(StepStatus),
-	sectionId: z.string().nullable(),
+	sectionId: z.string().max(64).nullable(),
 	requiresApproval: z.boolean(),
 });
+
+export class PlanStepDto extends createZodDto(PlanStepSchema) {}
 
 const PendingApprovalSchema = z.object({
 	id: z.uuid(),

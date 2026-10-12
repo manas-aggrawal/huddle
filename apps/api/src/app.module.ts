@@ -15,6 +15,7 @@ import { LlmModule } from './llm/llm.module';
 import { MessageModule } from './message/message.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { ModelsModule } from './models/models.module';
+import { PlanModule } from './plan/plan.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { SessionModule } from './session/session.module';
@@ -49,6 +50,7 @@ import { UserModule } from './user/user.module';
 		MessageModule,
 		DecisionModule,
 		ConflictModule,
+		PlanModule,
 		AgentModule,
 	],
 	providers: [

@@ -421,6 +421,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{id}/plan-steps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a step */
+        post: operations["PlanController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{id}/plan-steps/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reorder the steps */
+        post: operations["PlanController_reorder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{id}/plan-steps/{stepId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a step */
+        delete: operations["PlanController_remove"];
+        options?: never;
+        head?: never;
+        /** Rename, describe, skip or gate a step */
+        patch: operations["PlanController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -862,6 +914,34 @@ export interface components {
             resolution: string | null;
             resolvedById: string | null;
             resolvedAt: string | null;
+        };
+        AddStepDto: {
+            title: string;
+            description?: string;
+            requiresApproval?: boolean;
+            /** @description Put it after this step. null puts it first; omitted puts it last. */
+            after?: string | null;
+        };
+        PlanStepDto_Output: {
+            /** Format: uuid */
+            id: string;
+            position: number;
+            title: string;
+            description: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "IN_PROGRESS" | "DONE" | "SKIPPED" | "BLOCKED";
+            sectionId: string | null;
+            requiresApproval: boolean;
+        };
+        ReorderStepsDto: {
+            /** @description Every step id in the new order */
+            orderedIds: string[];
+        };
+        UpdateStepDto: {
+            title?: string;
+            description?: string | null;
+            requiresApproval?: boolean;
+            skipped?: boolean;
         };
     };
     responses: never;
@@ -1874,6 +1954,181 @@ export interface operations {
                 content?: never;
             };
             /** @description Already resolved */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddStepDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanStepDto_Output"][];
+                };
+            };
+            /** @description Your role in this session can't editPlan */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_reorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderStepsDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanStepDto_Output"][];
+                };
+            };
+            /** @description Your role in this session can't editPlan */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tried to move the step being written */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                stepId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanStepDto_Output"][];
+                };
+            };
+            /** @description Your role in this session can't editPlan */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tried to delete the step being written */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlanController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                stepId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStepDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanStepDto_Output"][];
+                };
+            };
+            /** @description Your role in this session can't editPlan */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Tried to skip the step being written */
             409: {
                 headers: {
                     [name: string]: unknown;
