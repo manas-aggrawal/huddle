@@ -19,8 +19,8 @@ export const {
 	DEFAULT_MODEL_PROVIDER = 'groq',
 	DEFAULT_MODEL_ID = 'openai/gpt-oss-120b',
 	// Models people can pick, "provider:modelId" comma-separated (the default is always included),
-	// e.g. "groq:openai/gpt-oss-120b,ollama:qwen2.5:14b"
-	MODELS,
+	// e.g. "groq:openai/gpt-oss-120b,ollama:qwen2.5:14b". Unset: the free Groq chat models.
+	MODELS = 'groq:qwen/qwen3.8-27b,groq:openai/gpt-oss-20b',
 	// Provider credentials and endpoints (see src/llm/providers.ts)
 	GROQ_API_KEY,
 	OLLAMA_BASE_URL = 'http://localhost:11434',
