@@ -17,9 +17,14 @@ import {
 	Injectable,
 } from '@nestjs/common';
 import { Message, Prisma, SessionMember } from '@prisma/client';
+import { PrismaService } from '@src/prisma/prisma.service';
 import { NotificationService } from '@src/realtime/notification.service';
 import { TimelineService } from '@src/timeline/timeline.service';
-import { CreateMessageDto, MessageDto } from './dto/message.dto';
+import {
+	CreateMessageDto,
+	MessageDto,
+	MessageWithAuthorDto,
+} from './dto/message.dto';
 
 /** Which permission each kind of message needs. */
 const ACTION_FOR: Record<MessageMode, SessionAction> = {
@@ -48,6 +53,7 @@ export function toMessageDto(m: Message): MessageDto {
 @Injectable()
 export class MessageService {
 	constructor(
+		private readonly prisma: PrismaService,
 		private readonly timeline: TimelineService,
 		private readonly notifications: NotificationService,
 	) {}
@@ -121,6 +127,28 @@ export class MessageService {
 			await this.notifyMentions(tx, sessionId, userId, actor.name, message);
 			return message;
 		});
+	}
+
+	/** Messages in the session, oldest first (e.g. the doc's comments). */
+	async list(
+		sessionId: string,
+		mode?: MessageMode,
+	): Promise<MessageWithAuthorDto[]> {
+		const rows = await this.prisma.message.findMany({
+			where: { sessionId, ...(mode ? { mode } : {}) },
+			orderBy: { createdAt: 'asc' },
+			take: 500,
+			include: {
+				author: { select: { id: true, firstname: true, lastname: true } },
+			},
+		});
+		return rows.map((m) => ({
+			...toMessageDto(m),
+			author: {
+				id: m.author.id,
+				name: `${m.author.firstname} ${m.author.lastname}`.trim(),
+			},
+		}));
 	}
 
 	/** A MENTION notification for each member named with @[userId] (not the author). */

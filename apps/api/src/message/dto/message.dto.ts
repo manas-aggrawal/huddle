@@ -39,3 +39,14 @@ const MessageSchema = z.object({
 	createdAt: z.string(),
 });
 export class MessageDto extends createZodDto(MessageSchema) {}
+
+export class ListMessagesQueryDto extends createZodDto(
+	z.object({ mode: z.enum(MessageMode).optional() }),
+) {}
+
+const MessageWithAuthorSchema = MessageSchema.extend({
+	author: z.object({ id: z.uuid(), name: z.string() }),
+});
+export class MessageWithAuthorDto extends createZodDto(
+	MessageWithAuthorSchema,
+) {}

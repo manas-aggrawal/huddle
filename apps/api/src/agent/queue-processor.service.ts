@@ -103,7 +103,14 @@ export class QueueProcessorService {
 
 	async process(run: AgentRun): Promise<void> {
 		const { sessionId } = run;
-		const queued = await this.context.queuedInput(sessionId, QUEUED_MODES);
+		// Suggestions first; doc comments (anyone, Viewers too) come after them.
+		const queued = (
+			await this.context.queuedInput(sessionId, QUEUED_MODES)
+		).sort(
+			(a, b) =>
+				Number(a.mode === MessageMode.COMMENT) -
+				Number(b.mode === MessageMode.COMMENT),
+		);
 		if (queued.length === 0) return;
 		await this.agentState.set(sessionId, AgentState.THINKING);
 

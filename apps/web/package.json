@@ -10,6 +10,7 @@
 		"gen:api": "npm run openapi:export -w @huddle/api && npm exec -w @huddle/api -- openapi-typescript dist/openapi.json -o ../web/src/lib/api-schema.d.ts"
 	},
 	"dependencies": {
+		"@floating-ui/dom": "^1.8.0",
 		"@hocuspocus/provider": "^4.7.0",
 		"@huddle/shared": "*",
 		"@tanstack/react-query": "^5.104.1",

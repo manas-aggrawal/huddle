@@ -13,10 +13,13 @@ type CatchUp = Schemas['CatchUpDto_Output'];
 export function CatchUpCard({
 	sessionId,
 	catchUp,
+	stillOpen,
 	onJump,
 }: {
 	sessionId: string;
 	catchUp: CatchUp;
+	/** Ids of approvals and conflicts still open now (the card was read at load). */
+	stillOpen: Set<string>;
 	/** Scroll the timeline to an event. */
 	onJump: (seq: number) => void;
 }) {
@@ -91,14 +94,16 @@ export function CatchUpCard({
 						{d.content} {jump(d.seq, 'Jump to')}
 					</li>
 				))}
-				{catchUp.waitingOnYou.map((w) => (
-					<li key={w.id} className="text-warn">
-						<span className="font-medium">
-							Waiting on you{w.kind === 'conflict' ? ' (conflict)' : ''}:
-						</span>{' '}
-						{w.title} {jump(w.seq, 'Jump to')}
-					</li>
-				))}
+				{catchUp.waitingOnYou
+					.filter((w) => stillOpen.has(w.id))
+					.map((w) => (
+						<li key={w.id} className="text-warn">
+							<span className="font-medium">
+								Waiting on you{w.kind === 'conflict' ? ' (conflict)' : ''}:
+							</span>{' '}
+							{w.title} {jump(w.seq, 'Jump to')}
+						</li>
+					))}
 			</ul>
 			<div className="mt-2 flex items-center justify-between">
 				<span className="text-xs text-muted">

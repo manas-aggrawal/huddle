@@ -93,3 +93,13 @@
 	border-radius: 4px;
 	transition: background 0.3s;
 }
+
+/* Commented text, and the one whose thread is open. */
+.huddle-doc .huddle-comment {
+	background: color-mix(in srgb, var(--warn) 18%, transparent);
+	border-bottom: 2px solid color-mix(in srgb, var(--warn) 55%, transparent);
+	cursor: pointer;
+}
+.huddle-doc .huddle-comment-active {
+	background: color-mix(in srgb, var(--warn) 32%, transparent);
+}

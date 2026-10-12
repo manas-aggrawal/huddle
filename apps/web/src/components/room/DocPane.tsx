@@ -4,7 +4,8 @@ import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { CommentHighlights } from '../../lib/doc/comments';
 import {
 	CitationLinks,
 	HumanMark,
@@ -15,6 +16,7 @@ import {
 	useDocProvider,
 } from '../../lib/doc/useDocProvider';
 import { avatarColor, Badge, cx } from '../ui';
+import { DocComments } from './DocComments';
 import { Pane } from './Pane';
 import './doc.css';
 
@@ -70,6 +72,7 @@ export function DocPane({
 					editable={editable}
 					onViewing={onViewing}
 					names={names}
+					sessionId={sessionId}
 				/>
 			) : null}
 		</Pane>
@@ -82,7 +85,9 @@ function Editor({
 	editable,
 	onViewing,
 	names: currentNames,
+	sessionId,
 }: {
+	sessionId: string;
 	connection: DocConnection;
 	me: Me;
 	editable: boolean;
@@ -93,6 +98,7 @@ function Editor({
 	// The editor is built once; the tooltip reads the latest names through this.
 	const names = useRef(currentNames);
 	names.current = currentNames;
+	const [activeComment, setActiveComment] = useState<string | null>(null);
 	const editor = useEditor({
 		editable,
 		extensions: [
@@ -104,6 +110,7 @@ function Editor({
 				nameOf: (id) => names.current.get(id),
 			}),
 			CitationLinks,
+			CommentHighlights.configure({ onOpen: (id) => setActiveComment(id) }),
 			Placeholder.configure({
 				placeholder: editable
 					? 'Start writing, or wait for the agent’s outline…'
@@ -148,6 +155,12 @@ function Editor({
 		<div className="flex min-h-full flex-col">
 			{editable && <Toolbar editor={editor} />}
 			<EditorContent editor={editor} className="flex-1 px-5 py-4 sm:px-8" />
+			<DocComments
+				editor={editor}
+				sessionId={sessionId}
+				active={activeComment}
+				onActive={setActiveComment}
+			/>
 		</div>
 	);
 }

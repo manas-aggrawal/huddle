@@ -411,7 +411,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List messages */
+        get: operations["MessagesController_list"];
         put?: never;
         /** Send a message to the agent */
         post: operations["MessagesController_create"];
@@ -1113,6 +1114,28 @@ export interface components {
             status: "QUEUED" | "ACKNOWLEDGED" | "APPLIED" | "DECLINED" | "ANSWERED";
             response: string | null;
             createdAt: string;
+        };
+        MessageWithAuthorDto_Output: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sessionId: string;
+            /** Format: uuid */
+            authorId: string;
+            /** @enum {string} */
+            mode: "SUGGEST" | "INTERRUPT" | "ASK" | "COMMENT";
+            content: string;
+            anchor: unknown | null;
+            planStepId: string | null;
+            /** @enum {string} */
+            status: "QUEUED" | "ACKNOWLEDGED" | "APPLIED" | "DECLINED" | "ANSWERED";
+            response: string | null;
+            createdAt: string;
+            author: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
         };
         ResolveConflictDto: {
             /** @description What the team goes with. Pinned as a decision. */
@@ -2182,6 +2205,43 @@ export interface operations {
                 content?: never;
             };
             /** @description Your role in this session can't pinDecision */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MessagesController_list: {
+        parameters: {
+            query?: {
+                mode?: "SUGGEST" | "INTERRUPT" | "ASK" | "COMMENT";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageWithAuthorDto_Output"][];
+                };
+            };
+            /** @description Your role in this session can't watch */
             403: {
                 headers: {
                     [name: string]: unknown;
