@@ -31,6 +31,9 @@ export const SECTION_ID_ATTR = 'sectionId';
 /** HTML attribute the editor renders the section id as. */
 export const SECTION_ID_HTML_ATTR = 'data-section-id';
 
+/** Section id of the "Sources" list the agent keeps at the end of the doc. */
+export const SOURCES_SECTION_ID = 'sources';
+
 /** Level the agent uses for section headings. */
 export const SECTION_HEADING_LEVEL = 2;
 

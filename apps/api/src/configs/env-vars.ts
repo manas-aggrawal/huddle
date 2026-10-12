@@ -27,6 +27,8 @@ export const {
 	// Web search for the agent: our SearXNG (docker compose up searxng), and how long to wait for it
 	SEARXNG_URL = 'http://localhost:8080',
 	SEARCH_TIMEOUT_MS,
+	// Hosts read_page may fetch even though they're private (comma-separated); for local testing only
+	SCRAPER_ALLOW_HOSTS,
 	// Token lifetimes (vercel/ms format, e.g. "30s", "15m", "1h"). Shorten the access one to test silent refresh.
 	ACCESS_TOKEN_TTL = '1h',
 	REFRESH_TOKEN_TTL = '8h',
