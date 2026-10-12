@@ -7,6 +7,10 @@ import {
 	approvalOutcomes,
 } from '../components/room/ApprovalBar';
 import { Composer } from '../components/room/Composer';
+import {
+	ConflictCard,
+	conflictResolutions,
+} from '../components/room/ConflictCard';
 import { DocPane } from '../components/room/DocPane';
 import { PinnedDecisions } from '../components/room/PinnedDecisions';
 import { PlanPane } from '../components/room/PlanPane';
@@ -41,6 +45,10 @@ export function SessionRoomPage() {
 		[session.data?.members],
 	);
 	const outcomes = useMemo(() => approvalOutcomes(live.events), [live.events]);
+	const resolutions = useMemo(
+		() => conflictResolutions(live.events),
+		[live.events],
+	);
 	const [draft, setDraft] = useState<{ text: string; n: number } | null>(null);
 
 	if (session.isPending) {
@@ -129,6 +137,28 @@ export function SessionRoomPage() {
 					events={live.events}
 					names={names}
 					renderExtra={(e) => {
+						if (e.type === EventType.CONFLICT_RAISED) {
+							const c = e.payload as {
+								conflictId: string;
+								stepTitle: string | null;
+								sides: {
+									messageId: string;
+									content: string;
+									author: { id: string; name: string };
+								}[];
+							};
+							return (
+								<ConflictCard
+									sessionId={s.id}
+									conflictId={c.conflictId}
+									sides={c.sides ?? []}
+									stepTitle={c.stepTitle}
+									open={s.openConflicts.some((o) => o.id === c.conflictId)}
+									resolved={resolutions.get(c.conflictId)}
+									canResolve={can(me, 'resolveConflict')}
+								/>
+							);
+						}
 						if (e.type !== EventType.APPROVAL_REQUESTED) return null;
 						const p = e.payload as {
 							approvalId: string;

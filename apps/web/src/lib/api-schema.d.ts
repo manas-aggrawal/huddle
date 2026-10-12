@@ -404,6 +404,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{id}/conflicts/{conflictId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve a conflict */
+        post: operations["ConflictsController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -662,6 +679,13 @@ export interface components {
                 } | null;
                 pinnedAt: string;
             }[];
+            openConflicts: {
+                /** Format: uuid */
+                id: string;
+                summary: string;
+                planStepId: string | null;
+                createdAt: string;
+            }[];
         };
         UpdateSessionStatusDto: {
             /** @enum {string} */
@@ -826,6 +850,18 @@ export interface components {
             status: "QUEUED" | "ACKNOWLEDGED" | "APPLIED" | "DECLINED" | "ANSWERED";
             response: string | null;
             createdAt: string;
+        };
+        ResolveConflictDto: {
+            /** @description What the team goes with. Pinned as a decision. */
+            resolution: string;
+        };
+        ConflictDto_Output: {
+            /** Format: uuid */
+            id: string;
+            summary: string;
+            resolution: string | null;
+            resolvedById: string | null;
+            resolvedAt: string | null;
         };
     };
     responses: never;
@@ -1791,6 +1827,53 @@ export interface operations {
                 content?: never;
             };
             /** @description The session is done (Ask still works) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ConflictsController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                conflictId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveConflictDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConflictDto_Output"];
+                };
+            };
+            /** @description Your role in this session can't resolveConflict */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already resolved */
             409: {
                 headers: {
                     [name: string]: unknown;

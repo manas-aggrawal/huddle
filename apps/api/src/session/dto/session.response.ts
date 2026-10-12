@@ -79,6 +79,13 @@ export const DecisionSchema = z.object({
 });
 export class DecisionDto extends createZodDto(DecisionSchema) {}
 
+const OpenConflictSchema = z.object({
+	id: z.uuid(),
+	summary: z.string(),
+	planStepId: z.uuid().nullable(),
+	createdAt: z.string(),
+});
+
 export const SessionDetailSchema = SessionSchema.extend({
 	myRole: z.enum(SessionRole),
 	myCanApprove: z.boolean(),
@@ -87,5 +94,7 @@ export const SessionDetailSchema = SessionSchema.extend({
 	pendingApprovals: z.array(PendingApprovalSchema),
 	/** Pinned decisions still in force, oldest first. */
 	decisions: z.array(DecisionSchema),
+	/** Conflicts waiting for the Owner. */
+	openConflicts: z.array(OpenConflictSchema),
 });
 export class SessionDetailDto extends createZodDto(SessionDetailSchema) {}

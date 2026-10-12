@@ -231,6 +231,10 @@ export class SessionService {
 					where: { status: ApprovalStatus.PENDING },
 					orderBy: { requestedAt: 'asc' },
 				},
+				conflicts: {
+					where: { resolvedAt: null },
+					orderBy: { createdAt: 'asc' },
+				},
 				decisions: {
 					where: { unpinnedAt: null },
 					orderBy: { pinnedAt: 'asc' },
@@ -274,6 +278,12 @@ export class SessionService {
 				requestedAt: a.requestedAt.toISOString(),
 			})),
 			decisions: session.decisions.map(toDecisionDto),
+			openConflicts: session.conflicts.map((c) => ({
+				id: c.id,
+				summary: c.summary,
+				planStepId: c.planStepId,
+				createdAt: c.createdAt.toISOString(),
+			})),
 		};
 	}
 

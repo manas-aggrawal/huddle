@@ -214,10 +214,16 @@ describe('Protecting human-written text', () => {
 		expect(await writer.getSectionText(id, sectionId)).toContain(
 			'Notion is the best tool.',
 		);
-		const message = await testPrisma.message.findFirstOrThrow({
-			where: { sessionId: id, mode: 'SUGGEST' },
-		});
-		expect(message.status).toBe('ACKNOWLEDGED');
+		// The reply is saved right after the approval is requested.
+		await waitFor(
+			async () =>
+				(
+					await testPrisma.message.findFirstOrThrow({
+						where: { sessionId: id, mode: 'SUGGEST' },
+					})
+				).status === 'ACKNOWLEDGED',
+			{ what: 'the suggestion to be acknowledged' },
+		);
 
 		await ctx
 			.as('maya')
