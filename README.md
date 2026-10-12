@@ -35,6 +35,8 @@ npm run migrate -w @huddle/api                # apply database migrations
 npm run dev
 ```
 
+The agent needs a model. Put a free Groq key (https://console.groq.com/keys) in `GROQ_API_KEY` in `apps/api/.env`, or run [Ollama](https://ollama.com) locally and list its models in `MODELS` (e.g. `MODELS=ollama:qwen2.5:14b`). Tests never call a real model.
+
 | URL | What |
 |---|---|
 | http://localhost:5173 | Web app |

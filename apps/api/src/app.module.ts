@@ -7,6 +7,7 @@ import { CollabModule } from './collab/collab.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL } from './configs/env-vars';
 import { HealthModule } from './health/health.module';
 import { InviteModule } from './invite/invite.module';
+import { LlmModule } from './llm/llm.module';
 import { LoggerMiddleware } from './middleware/logger.middleware';
 import { ModelsModule } from './models/models.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -38,6 +39,7 @@ import { UserModule } from './user/user.module';
 		RealtimeModule,
 		CollabModule,
 		ModelsModule,
+		LlmModule,
 	],
 	providers: [
 		{

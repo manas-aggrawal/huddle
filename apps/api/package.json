@@ -28,6 +28,8 @@
 		"openapi:export": "nest build && node dist/scripts/export-openapi.js dist/openapi.json"
 	},
 	"dependencies": {
+		"@ai-sdk/groq": "^4.0.59",
+		"@ai-sdk/openai-compatible": "^3.0.67",
 		"@hocuspocus/extension-database": "^4.7.0",
 		"@hocuspocus/server": "^4.7.0",
 		"@huddle/shared": "*",
