@@ -61,10 +61,12 @@ export class ReplannerService {
 				include: { author: { select: { firstname: true, lastname: true } } },
 			});
 			if (!message || message.status !== MessageStatus.QUEUED) return;
-			await tx.message.update({
-				where: { id: messageId },
+			// Conditional: the replan may already have handled it (APPLIED) meanwhile.
+			const { count } = await tx.message.updateMany({
+				where: { id: messageId, status: MessageStatus.QUEUED },
 				data: { status: MessageStatus.ACKNOWLEDGED },
 			});
+			if (count === 0) return;
 			const name =
 				`${message.author.firstname} ${message.author.lastname}`.trim();
 			await this.timeline.append(tx, message.sessionId, {

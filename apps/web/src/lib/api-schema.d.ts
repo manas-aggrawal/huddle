@@ -473,6 +473,40 @@ export interface paths {
         patch: operations["PlanController_update"];
         trace?: never;
     };
+    "/sessions/{id}/catch-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catch up on a session */
+        get: operations["CatchUpController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{id}/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark the timeline as seen */
+        post: operations["CatchUpController_seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -942,6 +976,38 @@ export interface components {
             description?: string | null;
             requiresApproval?: boolean;
             skipped?: boolean;
+        };
+        CatchUpDto_Output: {
+            fromSeq: number;
+            toSeq: number;
+            unseenCount: number;
+            stepsCompleted: {
+                stepId: string;
+                title: string;
+                seq: number;
+            }[];
+            decisions: {
+                decisionId: string;
+                content: string;
+                by: string | null;
+                seq: number;
+            }[];
+            waitingOnYou: {
+                /** @enum {string} */
+                kind: "approval" | "conflict";
+                id: string;
+                title: string;
+                approvalKind: ("OUTLINE" | "REWRITE_HUMAN_TEXT" | "MARK_FINAL" | "BUDGET" | "CUSTOM") | null;
+                seq: number | null;
+            }[];
+            /** @description Short LLM summary; null when there was too little to summarize */
+            summary: string | null;
+        };
+        SeenDto: {
+            seq: number;
+        };
+        SeenResultDto_Output: {
+            lastSeenSeq: number;
         };
     };
     responses: never;
@@ -2130,6 +2196,80 @@ export interface operations {
             };
             /** @description Tried to skip the step being written */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatchUpController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatchUpDto_Output"];
+                };
+            };
+            /** @description Your role in this session can't watch */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatchUpController_seen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SeenDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeenResultDto_Output"];
+                };
+            };
+            /** @description Your role in this session can't watch */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
