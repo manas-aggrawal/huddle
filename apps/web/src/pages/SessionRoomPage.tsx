@@ -1,4 +1,4 @@
-import { can } from '@huddle/shared';
+import { can, SessionStatus } from '@huddle/shared';
 import { Link, useParams } from 'react-router';
 import { DocPane } from '../components/room/DocPane';
 import { PlanPane } from '../components/room/PlanPane';
@@ -69,7 +69,11 @@ export function SessionRoomPage() {
 				connection={live.status}
 			/>
 			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
-				<PlanPane steps={s.planSteps} className="max-h-80 lg:max-h-none" />
+				<PlanPane
+					steps={s.planSteps}
+					planning={s.status === SessionStatus.PLANNING}
+					className="max-h-80 lg:max-h-none"
+				/>
 				{user && (
 					<DocPane
 						sessionId={s.id}

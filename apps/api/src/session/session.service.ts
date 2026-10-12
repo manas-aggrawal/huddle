@@ -5,6 +5,8 @@ import {
 	ApprovalStatus,
 	Effort,
 	EventType,
+	MessageMode,
+	MessageStatus,
 	SessionRole,
 	SessionStatus,
 	StepStatus,
@@ -21,6 +23,7 @@ import {
 	DEFAULT_MODEL_ID,
 	DEFAULT_MODEL_PROVIDER,
 } from '@src/configs/env-vars';
+import { isAllowedModel } from '@src/models/models.registry';
 import { PrismaService } from '@src/prisma/prisma.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import {
@@ -103,10 +106,18 @@ export class SessionService {
 
 	/**
 	 * Creates the session, makes the caller its Owner, and writes timeline event #1,
-	 * all in one transaction. Any member of the workspace can create a session.
+	 * all in one transaction. Optional context becomes the first message (a
+	 * Suggest from the creator). Any member of the workspace can create a session.
 	 */
 	async create(userId: string, dto: CreateSessionDto): Promise<SessionDto> {
 		const workspaceId = await this.resolveWorkspace(userId, dto.workspaceId);
+		const modelProvider = dto.modelProvider ?? DEFAULT_MODEL_PROVIDER;
+		const modelId = dto.modelId ?? DEFAULT_MODEL_ID;
+		if (!isAllowedModel(modelProvider, modelId)) {
+			throw new BadRequestException(
+				`Model ${modelProvider}:${modelId} isn't available. GET /models lists the ones you can use.`,
+			);
+		}
 
 		const session = await this.timeline.transaction(async (tx) => {
 			const created = await tx.session.create({
@@ -121,16 +132,37 @@ export class SessionService {
 					members: { create: { userId, role: SessionRole.OWNER } },
 				},
 			});
+			const actor = await this.timeline.actorSnapshot(tx, userId);
 			await this.timeline.append(tx, created.id, {
 				type: EventType.SESSION_CREATED,
 				actorType: ActorType.USER,
 				actorId: userId,
-				payload: {
-					actor: await this.timeline.actorSnapshot(tx, userId),
-					title: created.title,
-					goal: created.goal,
-				},
+				payload: { actor, title: created.title, goal: created.goal },
 			});
+			// Background the creator gave goes to the agent as their first Suggest.
+			if (dto.context) {
+				const message = await tx.message.create({
+					data: {
+						sessionId: created.id,
+						authorId: userId,
+						mode: MessageMode.SUGGEST,
+						status: MessageStatus.QUEUED,
+						content: dto.context,
+					},
+				});
+				await this.timeline.append(tx, created.id, {
+					type: EventType.HUMAN_MESSAGE,
+					actorType: ActorType.USER,
+					actorId: userId,
+					payload: {
+						actor,
+						messageId: message.id,
+						mode: message.mode,
+						content: message.content,
+						author: { ...actor, role: SessionRole.OWNER },
+					},
+				});
+			}
 			// Re-read so lastEventSeq/updatedAt reflect the event just written.
 			return tx.session.findUniqueOrThrow({ where: { id: created.id } });
 		});

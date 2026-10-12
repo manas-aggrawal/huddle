@@ -8,4 +8,5 @@ export * from './Input';
 export * from './icons';
 export * from './Popover';
 export * from './Switch';
+export * from './Textarea';
 export * from './ThemeToggle';

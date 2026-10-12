@@ -329,4 +329,86 @@ describe('Sessions API', () => {
 			.send({ action: 'pause' })
 			.expect(401);
 	});
+	describe('creating with context and a model (#11)', () => {
+		it('saves context as one QUEUED Suggest from the creator, plus a HUMAN_MESSAGE event #2', async () => {
+			const res = await ctx
+				.as('maya')
+				.post('/sessions')
+				.send(body({ context: '  Focus on pricing. See https://obsidian.md/pricing  ' }))
+				.expect(201);
+			expect(res.body.lastEventSeq).toBe(2);
+
+			const messages = await testPrisma.message.findMany({
+				where: { sessionId: res.body.id },
+			});
+			expect(messages).toEqual([
+				expect.objectContaining({
+					authorId: ctx.users.maya.id,
+					mode: 'SUGGEST',
+					status: 'QUEUED',
+					content: 'Focus on pricing. See https://obsidian.md/pricing',
+				}),
+			]);
+
+			const events = await testPrisma.timelineEvent.findMany({
+				where: { sessionId: res.body.id },
+				orderBy: { seq: 'asc' },
+			});
+			expect(events.map((e) => [e.seq, e.type])).toEqual([
+				[1, 'SESSION_CREATED'],
+				[2, 'HUMAN_MESSAGE'],
+			]);
+			expect(events[1].payload).toMatchObject({
+				messageId: messages[0].id,
+				mode: 'SUGGEST',
+				content: 'Focus on pricing. See https://obsidian.md/pricing',
+				author: { id: ctx.users.maya.id, role: 'OWNER' },
+			});
+		});
+
+		it('creates no message for missing or blank context', async () => {
+			for (const context of [undefined, '   ']) {
+				const res = await ctx
+					.as('maya')
+					.post('/sessions')
+					.send(body({ context }))
+					.expect(201);
+				expect(
+					await testPrisma.message.count({ where: { sessionId: res.body.id } }),
+				).toBe(0);
+				expect(res.body.lastEventSeq).toBe(1);
+			}
+		});
+
+		it('rejects context over 10,000 characters, and writes nothing', async () => {
+			const before = await testPrisma.session.count();
+			await ctx
+				.as('maya')
+				.post('/sessions')
+				.send(body({ context: 'x'.repeat(10_001) }))
+				.expect(400);
+			expect(await testPrisma.session.count()).toBe(before);
+		});
+
+		it('GET /models lists the default model first; creating with an unlisted model is a 400', async () => {
+			const models = await ctx.as('maya').get('/models').expect(200);
+			expect(models.body[0]).toEqual({
+				provider: 'groq',
+				modelId: 'llama-3.3-70b-versatile',
+				label: 'groq · llama-3.3-70b-versatile',
+				isDefault: true,
+			});
+			await ctx
+				.as('maya')
+				.post('/sessions')
+				.send(body({ modelProvider: 'openai', modelId: 'gpt-9' }))
+				.expect(400);
+			await ctx
+				.as('maya')
+				.post('/sessions')
+				.send(body({ modelProvider: 'groq', modelId: 'llama-3.3-70b-versatile' }))
+				.expect(201);
+			await ctx.http.get('/models').expect(401);
+		});
+	});
 });
