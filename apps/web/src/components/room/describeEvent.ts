@@ -145,6 +145,8 @@ export function describeEvent(e: TimelineEventDto): {
 			return { text: 'resolved a conflict', detail: str(p.resolution) };
 		case EventType.DECISION_PINNED:
 			return { text: 'pinned a decision', detail: str(p.content) };
+		case EventType.DECISION_UNPINNED:
+			return { text: 'unpinned a decision', detail: str(p.content) };
 		case EventType.HANDOFF:
 			return { text: `handed the session to ${nameOf(p.to) ?? 'someone'}` };
 		case EventType.MODEL_CHANGED:

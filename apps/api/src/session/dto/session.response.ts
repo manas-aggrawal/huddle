@@ -69,11 +69,23 @@ const PendingApprovalSchema = z.object({
 	requestedAt: z.string(),
 });
 
+export const DecisionSchema = z.object({
+	id: z.uuid(),
+	content: z.string(),
+	/** Where it came from: typed by hand, an answered approval, or a settled conflict. */
+	origin: z.enum(['manual', 'approval', 'conflict']),
+	createdBy: z.object({ id: z.uuid(), name: z.string() }).nullable(),
+	pinnedAt: z.string(),
+});
+export class DecisionDto extends createZodDto(DecisionSchema) {}
+
 export const SessionDetailSchema = SessionSchema.extend({
 	myRole: z.enum(SessionRole),
 	myCanApprove: z.boolean(),
 	members: z.array(MemberSchema),
 	planSteps: z.array(PlanStepSchema),
 	pendingApprovals: z.array(PendingApprovalSchema),
+	/** Pinned decisions still in force, oldest first. */
+	decisions: z.array(DecisionSchema),
 });
 export class SessionDetailDto extends createZodDto(SessionDetailSchema) {}

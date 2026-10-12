@@ -115,6 +115,7 @@ export const EventType = {
 	CONFLICT_RAISED: 'CONFLICT_RAISED',
 	CONFLICT_RESOLVED: 'CONFLICT_RESOLVED',
 	DECISION_PINNED: 'DECISION_PINNED',
+	DECISION_UNPINNED: 'DECISION_UNPINNED',
 	HANDOFF: 'HANDOFF',
 	MODEL_CHANGED: 'MODEL_CHANGED',
 	BUDGET_WARNING: 'BUDGET_WARNING',
@@ -150,3 +151,8 @@ export const mentionPattern = () => /@\[([0-9a-f-]{36})\]/gi;
 export function mentionedUserIds(content: string): string[] {
 	return [...new Set([...content.matchAll(mentionPattern())].map((m) => m[1]))];
 }
+
+/** Limits for pinned decisions. */
+export const DecisionLimits = {
+	CONTENT_MAX: 1000,
+} as const;

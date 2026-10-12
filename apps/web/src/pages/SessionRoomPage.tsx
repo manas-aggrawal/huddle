@@ -8,6 +8,7 @@ import {
 } from '../components/room/ApprovalBar';
 import { Composer } from '../components/room/Composer';
 import { DocPane } from '../components/room/DocPane';
+import { PinnedDecisions } from '../components/room/PinnedDecisions';
 import { PlanPane } from '../components/room/PlanPane';
 import { RoomHeader } from '../components/room/RoomHeader';
 import { TimelinePane } from '../components/room/TimelinePane';
@@ -94,6 +95,13 @@ export function SessionRoomPage() {
 			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
 				<PlanPane
 					steps={s.planSteps}
+					footer={
+						<PinnedDecisions
+							sessionId={s.id}
+							decisions={s.decisions}
+							canPin={can(me, 'pinDecision')}
+						/>
+					}
 					gatedStepIds={
 						new Set(
 							s.pendingApprovals

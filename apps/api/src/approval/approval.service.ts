@@ -17,6 +17,7 @@ import {
 	NotFoundException,
 } from '@nestjs/common';
 import { Approval, Prisma, SessionMember } from '@prisma/client';
+import { DecisionService } from '@src/decision/decision.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import { ApprovalDecision, ResolveApprovalDto } from './dto/approval.dto';
 
@@ -44,7 +45,10 @@ export interface ApprovalPayload {
  */
 @Injectable()
 export class ApprovalService {
-	constructor(private readonly timeline: TimelineService) {}
+	constructor(
+		private readonly timeline: TimelineService,
+		private readonly decisions: DecisionService,
+	) {}
 
 	/**
 	 * Creates a pending approval inside the caller's timeline transaction, sets
@@ -169,6 +173,14 @@ export class ApprovalService {
 				actorId: userId,
 				payload: { ...payload, actor, resolvedBy: actor },
 			});
+			// A note on an answer is something the team decided: pin it.
+			if (dto.note) {
+				await this.decisions.pin(tx, sessionId, {
+					content: `On “${approval.title}”: ${dto.note}`,
+					createdById: userId,
+					approvalId,
+				});
+			}
 			return tx.approval.findUniqueOrThrow({ where: { id: approvalId } });
 		});
 	}
