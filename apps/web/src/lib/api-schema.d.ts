@@ -353,6 +353,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a message to the agent */
+        post: operations["MessagesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -714,6 +731,38 @@ export interface components {
             resolvedById: string | null;
             resolvedAt: string | null;
             note: string | null;
+        };
+        CreateMessageDto: {
+            /** @enum {string} */
+            mode: "SUGGEST" | "INTERRUPT" | "ASK" | "COMMENT";
+            /** @description Mention people as @[userId] */
+            content: string;
+            /** Format: uuid */
+            planStepId?: string;
+            /** @description For comments: the section and quoted text it refers to */
+            anchor?: {
+                sectionId: string;
+                quote: string;
+                from?: string;
+                to?: string;
+            };
+        };
+        MessageDto_Output: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sessionId: string;
+            /** Format: uuid */
+            authorId: string;
+            /** @enum {string} */
+            mode: "SUGGEST" | "INTERRUPT" | "ASK" | "COMMENT";
+            content: string;
+            anchor: unknown | null;
+            planStepId: string | null;
+            /** @enum {string} */
+            status: "QUEUED" | "ACKNOWLEDGED" | "APPLIED" | "DECLINED" | "ANSWERED";
+            response: string | null;
+            createdAt: string;
         };
     };
     responses: never;
@@ -1559,6 +1608,52 @@ export interface operations {
                 content?: never;
             };
             /** @description Someone already answered it */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    MessagesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMessageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDto_Output"];
+                };
+            };
+            /** @description Your role in this session can't watch */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The session is done (Ask still works) */
             409: {
                 headers: {
                     [name: string]: unknown;
