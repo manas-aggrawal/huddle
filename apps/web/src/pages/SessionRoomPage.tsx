@@ -1,6 +1,6 @@
 import { type AgentState, can, EventType, SessionStatus } from '@huddle/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import {
 	ApprovalBar,
@@ -18,6 +18,7 @@ import { commentsKey } from '../components/room/DocComments';
 import { DocPane } from '../components/room/DocPane';
 import { PinnedDecisions } from '../components/room/PinnedDecisions';
 import { PlanPane } from '../components/room/PlanPane';
+import { Replay } from '../components/room/Replay';
 import { RoomHeader } from '../components/room/RoomHeader';
 import { TimelinePane } from '../components/room/TimelinePane';
 import { ToolCallLinks } from '../components/room/ToolCallLinks';
@@ -56,6 +57,10 @@ export function SessionRoomPage() {
 	);
 	const [draft, setDraft] = useState<{ text: string; n: number } | null>(null);
 	const [jumpTo, setJumpTo] = useState<{ seq: number; n: number } | null>(null);
+	const showEvent = useCallback(
+		(seq: number) => setJumpTo((j) => ({ seq, n: (j?.n ?? 0) + 1 })),
+		[],
+	);
 	// Read once per visit, before this visit marks anything as seen.
 	const catchUp = useQuery({
 		queryKey: ['catch-up', sessionId],
@@ -136,6 +141,9 @@ export function SessionRoomPage() {
 				usage={live.usage}
 			/>
 			<ApprovalBar session={s} me={me} />
+			{s.status === SessionStatus.DONE && (
+				<DoneBanner session={s} events={live.events} />
+			)}
 			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
 				<PlanPane
 					sessionId={s.id}
@@ -145,7 +153,7 @@ export function SessionRoomPage() {
 						<PinnedDecisions
 							sessionId={s.id}
 							decisions={s.decisions}
-							canPin={can(me, 'pinDecision')}
+							canPin={can(me, 'pinDecision') && s.status !== SessionStatus.DONE}
 						/>
 					}
 					gatedStepIds={
@@ -180,7 +188,10 @@ export function SessionRoomPage() {
 							{s.lastHandoff && s.lastHandoff.to.id === user?.id && (
 								<BriefingCard handoff={s.lastHandoff} />
 							)}
-							{catchUp.data && (
+							{s.status === SessionStatus.DONE && (
+								<Replay events={live.events} onShow={showEvent} />
+							)}
+							{catchUp.data && s.status !== SessionStatus.DONE && (
 								<CatchUpCard
 									sessionId={s.id}
 									catchUp={catchUp.data}
@@ -320,4 +331,38 @@ function useRefreshComments(
 		if (isComment)
 			void queryClient.invalidateQueries({ queryKey: commentsKey(sessionId) });
 	}, [sessionId, last, queryClient]);
+}
+
+/** Who finished it and when; the doc is read-only from here on. */
+function DoneBanner({
+	session,
+	events,
+}: {
+	session: { completedAt: string | null };
+	events: { type: string; payload: Record<string, unknown> }[];
+}) {
+	const ended = [...events]
+		.reverse()
+		.find(
+			(e) =>
+				(e.type === EventType.APPROVAL_RESOLVED &&
+					e.payload.kind === 'MARK_FINAL') ||
+				(e.type === EventType.STATUS_CHANGED && e.payload.to === 'DONE'),
+		);
+	const by = (ended?.payload.actor as { name?: string } | undefined)?.name;
+	const when = session.completedAt
+		? new Date(session.completedAt).toLocaleString()
+		: null;
+	return (
+		<div
+			className="border-b border-line bg-ok-soft/60 px-4 py-2.5 text-sm"
+			role="status"
+		>
+			<span className="font-medium text-ok">Done.</span>{' '}
+			{ended?.type === EventType.APPROVAL_RESOLVED ? 'Marked final' : 'Ended'}
+			{by && ` by ${by}`}
+			{when && ` on ${when}`}. The document is read-only; you can still ask the
+			agent questions, and replay how it was made.
+		</div>
+	);
 }

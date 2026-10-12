@@ -36,7 +36,7 @@ describe('Protecting human-written text', () => {
 		await ctx.close();
 	});
 
-	/** A session parked in DONE so the agent leaves its doc alone. */
+	/** A session parked in PAUSED so the agent leaves its doc alone (DONE docs are read-only). */
 	async function quietSession() {
 		agent.script([{ text: outlineReply('Unused') }]);
 		const res = await ctx
@@ -49,7 +49,7 @@ describe('Protecting human-written text', () => {
 		);
 		await testPrisma.session.update({
 			where: { id: res.body.id },
-			data: { status: 'DONE' },
+			data: { status: 'PAUSED' },
 		});
 		return res.body.id as string;
 	}
