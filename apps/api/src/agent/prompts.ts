@@ -180,8 +180,8 @@ export function queuePrompt(input: {
 					`- id ${m.messageId} | ${m.author} (${m.role.toLowerCase()}) ${m.mode === 'COMMENT' ? `commented on "${m.quote ?? ''}"${m.section ? ` in "${m.section}"` : ''}` : 'suggested'}: ${m.content}`,
 			)
 			.join('\n')}`,
-		`Decide what to do with each input:
-- "apply": follow it in the sections you still have to write.
+		`Decide what to do with each input. Comments on the doc are lower priority than suggestions: when they disagree, follow the suggestion.
+- "apply": follow it in the sections you still have to write. For a comment on a finished section, apply it with a "rewrite" of the quoted text.
 - "plan_change": change the plan (give planOps).
 - "decline": don't follow it; say why politely.
 To change text already written in a finished section, add "rewrite": {"position":N,"before":"exact text to replace","after":"new text"}. Changing a human-authored passage asks that person's team for approval first.

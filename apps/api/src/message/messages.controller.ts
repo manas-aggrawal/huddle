@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import {
 	ApiBearerAuth,
 	ApiConflictResponse,
@@ -11,7 +11,12 @@ import {
 	RequireSessionAction,
 } from '@src/session/decorators/session-access.decorator';
 import { ZodResponse } from 'nestjs-zod';
-import { CreateMessageDto, MessageDto } from './dto/message.dto';
+import {
+	CreateMessageDto,
+	ListMessagesQueryDto,
+	MessageDto,
+	MessageWithAuthorDto,
+} from './dto/message.dto';
 import { MessageService, toMessageDto } from './message.service';
 
 @ApiTags('Messages')
@@ -35,5 +40,18 @@ export class MessagesController {
 		@Body() body: CreateMessageDto,
 	): Promise<MessageDto> {
 		return toMessageDto(await this.messages.create(membership, body));
+	}
+
+	/** Messages in the session, oldest first; `?mode=COMMENT` lists the doc's comments. */
+	@Get()
+	@RequireSessionAction('watch')
+	@ApiOperation({ summary: 'List messages' })
+	@ZodResponse({ status: 200, type: [MessageWithAuthorDto] })
+	list(
+		@Param('id') _id: string,
+		@CurrentMembership() membership: SessionMember,
+		@Query() query: ListMessagesQueryDto,
+	): Promise<MessageWithAuthorDto[]> {
+		return this.messages.list(membership.sessionId, query.mode);
 	}
 }

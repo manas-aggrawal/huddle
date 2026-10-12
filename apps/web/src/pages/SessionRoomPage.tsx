@@ -1,5 +1,5 @@
 import { type AgentState, can, EventType, SessionStatus } from '@huddle/shared';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import {
@@ -14,6 +14,7 @@ import {
 	ConflictCard,
 	conflictResolutions,
 } from '../components/room/ConflictCard';
+import { commentsKey } from '../components/room/DocComments';
 import { DocPane } from '../components/room/DocPane';
 import { PinnedDecisions } from '../components/room/PinnedDecisions';
 import { PlanPane } from '../components/room/PlanPane';
@@ -70,6 +71,7 @@ export function SessionRoomPage() {
 		retry: false,
 	});
 	useMarkSeen(sessionId, live.events.at(-1)?.seq, !catchUp.isPending);
+	useRefreshComments(sessionId, live.events);
 	// Opened from the inbox: jump to the event the notification is about.
 	const [params, setParams] = useSearchParams();
 	const focus = params.get('focus');
@@ -182,6 +184,12 @@ export function SessionRoomPage() {
 								<CatchUpCard
 									sessionId={s.id}
 									catchUp={catchUp.data}
+									stillOpen={
+										new Set([
+											...s.pendingApprovals.map((a) => a.id),
+											...s.openConflicts.map((c) => c.id),
+										])
+									}
 									onJump={(seq) =>
 										setJumpTo((j) => ({ seq, n: (j?.n ?? 0) + 1 }))
 									}
@@ -294,4 +302,22 @@ function useMarkSeen(
 		}, 2000);
 		return () => clearTimeout(t);
 	}, [sessionId, lastSeq, enabled]);
+}
+
+/** New comments, and the agent's replies to them, refresh the doc's comment threads. */
+function useRefreshComments(
+	sessionId: string | undefined,
+	events: { seq: number; type: string; payload: Record<string, unknown> }[],
+) {
+	const queryClient = useQueryClient();
+	const last = events.at(-1);
+	useEffect(() => {
+		if (!sessionId || !last) return;
+		const isComment =
+			(last.type === EventType.HUMAN_MESSAGE ||
+				last.type === EventType.AGENT_ACK) &&
+			last.payload.mode === 'COMMENT';
+		if (isComment)
+			void queryClient.invalidateQueries({ queryKey: commentsKey(sessionId) });
+	}, [sessionId, last, queryClient]);
 }
