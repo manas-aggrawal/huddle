@@ -16,7 +16,10 @@ export interface ModelOption {
 function parse(entry: string): { provider: string; modelId: string } | null {
 	const i = entry.indexOf(':');
 	if (i <= 0 || i === entry.length - 1) return null;
-	return { provider: entry.slice(0, i).trim(), modelId: entry.slice(i + 1).trim() };
+	return {
+		provider: entry.slice(0, i).trim(),
+		modelId: entry.slice(i + 1).trim(),
+	};
 }
 
 /**

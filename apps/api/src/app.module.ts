@@ -1,6 +1,8 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AgentModule } from './agent/agent.module';
+import { ApprovalModule } from './approval/approval.module';
 import { AuthModule } from './auth/auth.module';
 import { AccessTokenGuard } from './auth/guards/access-token.guard';
 import { CollabModule } from './collab/collab.module';
@@ -40,6 +42,8 @@ import { UserModule } from './user/user.module';
 		CollabModule,
 		ModelsModule,
 		LlmModule,
+		ApprovalModule,
+		AgentModule,
 	],
 	providers: [
 		{

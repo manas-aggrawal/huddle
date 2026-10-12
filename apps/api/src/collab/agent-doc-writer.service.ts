@@ -15,7 +15,9 @@ import { CollabServer } from './collab.server';
 import {
 	findSection,
 	fragmentOf,
+	headingText,
 	humanRanges,
+	listSections,
 	SectionBounds,
 	sectionText,
 } from './doc-structure';
@@ -33,8 +35,16 @@ const AGENT_FORMAT = { [HUMAN_MARK]: null };
 export class AgentDocWriter {
 	constructor(private readonly collab: CollabServer) {}
 
-	/** Adds a section at the end of the document: a heading and an empty paragraph. */
-	async insertSection(sessionId: string, sectionId: string, title: string) {
+	/**
+	 * Adds a section: a heading and an empty paragraph. It goes right after the
+	 * `after` section when that exists, else before `before`, else at the end.
+	 */
+	async insertSection(
+		sessionId: string,
+		sectionId: string,
+		title: string,
+		place: { after?: string | null; before?: string | null } = {},
+	) {
 		await this.write(sessionId, (doc) => {
 			if (findSection(doc, sectionId)) {
 				throw new ConflictException(`Section ${sectionId} already exists`);
@@ -46,8 +56,29 @@ export class AgentDocWriter {
 			const body = new Y.XmlElement(DocNode.PARAGRAPH);
 			body.insert(0, [new Y.XmlText()]);
 			const fragment = fragmentOf(doc);
-			fragment.insert(fragment.length, [heading, body]);
+			const after = place.after ? findSection(doc, place.after) : null;
+			const before = place.before ? findSection(doc, place.before) : null;
+			const at = after?.end ?? before?.heading ?? fragment.length;
+			fragment.insert(at, [heading, body]);
 		});
+	}
+
+	/** Whether the section's heading is still in the document (people can delete it). */
+	async hasSection(sessionId: string, sectionId: string): Promise<boolean> {
+		return this.read(sessionId, (doc) => findSection(doc, sectionId) !== null);
+	}
+
+	/** Every section in document order, with its heading and body text. */
+	async listSections(
+		sessionId: string,
+	): Promise<{ sectionId: string; title: string; text: string }[]> {
+		return this.read(sessionId, (doc) =>
+			listSections(doc).map((bounds) => ({
+				sectionId: bounds.sectionId,
+				title: headingText(doc, bounds),
+				text: sectionText(doc, bounds),
+			})),
+		);
 	}
 
 	/**

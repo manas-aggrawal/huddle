@@ -336,6 +336,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{id}/approvals/{approvalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or reject */
+        post: operations["ApprovalsController_resolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -674,6 +691,29 @@ export interface components {
             modelId: string;
             label: string;
             isDefault: boolean;
+        };
+        ResolveApprovalDto: {
+            /** @enum {string} */
+            decision: "approve" | "reject";
+            /** @description Why. A note on a rejected outline tells the agent what to change. */
+            note?: string;
+        };
+        ApprovalDto_Output: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sessionId: string;
+            /** @enum {string} */
+            kind: "OUTLINE" | "REWRITE_HUMAN_TEXT" | "MARK_FINAL" | "BUDGET" | "CUSTOM";
+            title: string;
+            details: unknown | null;
+            planStepId: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+            requestedAt: string;
+            resolvedById: string | null;
+            resolvedAt: string | null;
+            note: string | null;
         };
     };
     responses: never;
@@ -1477,6 +1517,53 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ModelOptionDto_Output"][];
                 };
+            };
+        };
+    };
+    ApprovalsController_resolve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                approvalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveApprovalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalDto_Output"];
+                };
+            };
+            /** @description Your role in this session can't approve */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Someone already answered it */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

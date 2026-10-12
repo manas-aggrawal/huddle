@@ -1,4 +1,6 @@
 import {
+	type AgentState,
+	type AgentStateChanged,
 	type PresenceMember,
 	type PresenceUpdateRequest,
 	type SessionJoinAck,
@@ -23,6 +25,8 @@ export interface SessionSocketState {
 	error: { status: number; message: string } | null;
 	/** The Owner removed you from the session. */
 	removed: boolean;
+	/** What the agent is doing, from live updates. Null until the first one arrives. */
+	agent: { state: AgentState; stepId: string | null } | null;
 	/** Send what you're looking at / whether you're typing (rate limited server-side). */
 	updatePresence: (change: Omit<PresenceUpdateRequest, 'sessionId'>) => void;
 }
@@ -54,6 +58,7 @@ export function useSessionSocket(
 	const [presence, setPresence] = useState<PresenceMember[]>([]);
 	const [error, setError] = useState<SessionSocketState['error']>(null);
 	const [removed, setRemoved] = useState(false);
+	const [agent, setAgent] = useState<SessionSocketState['agent']>(null);
 	const lastSeq = useRef(0);
 
 	useEffect(() => {
@@ -65,6 +70,7 @@ export function useSessionSocket(
 		setPresence([]);
 		setError(null);
 		setRemoved(false);
+		setAgent(null);
 		setStatus(socket.connected ? 'live' : 'connecting');
 
 		const apply = (incoming: TimelineEventDto[]) => {
@@ -126,6 +132,10 @@ export function useSessionSocket(
 				list.map((m) => (m.userId === p.member.userId ? p.member : m)),
 			);
 		};
+		const onAgentState = (p: AgentStateChanged) => {
+			if (p.sessionId === sessionId)
+				setAgent({ state: p.agentState, stepId: p.stepId });
+		};
 		const onRemoved = (p: { sessionId: string }) => {
 			if (p.sessionId !== sessionId) return;
 			setRemoved(true);
@@ -139,6 +149,7 @@ export function useSessionSocket(
 		socket.on(SocketEvent.PRESENCE_STATE, onPresenceState);
 		socket.on(SocketEvent.PRESENCE_CHANGED, onPresenceChanged);
 		socket.on(SocketEvent.SESSION_REMOVED, onRemoved);
+		socket.on(SocketEvent.AGENT_STATE, onAgentState);
 		if (socket.connected) void join();
 
 		return () => {
@@ -150,6 +161,7 @@ export function useSessionSocket(
 			socket.off(SocketEvent.PRESENCE_STATE, onPresenceState);
 			socket.off(SocketEvent.PRESENCE_CHANGED, onPresenceChanged);
 			socket.off(SocketEvent.SESSION_REMOVED, onRemoved);
+			socket.off(SocketEvent.AGENT_STATE, onAgentState);
 			if (socket.connected)
 				socket.emit(SocketEvent.SESSION_LEAVE, { sessionId }, () => undefined);
 		};
@@ -163,5 +175,13 @@ export function useSessionSocket(
 		[sessionId],
 	);
 
-	return { status, events, presence, error, removed, updatePresence };
+	return {
+		status,
+		events,
+		presence,
+		error,
+		removed,
+		agent,
+		updatePresence,
+	};
 }

@@ -290,6 +290,13 @@ export class SessionService {
 					'The session status changed while you were updating it. Reload and try again.',
 				);
 			}
+			// Nothing is left to approve once the session has ended.
+			if (to === SessionStatus.DONE) {
+				await tx.approval.updateMany({
+					where: { sessionId, status: ApprovalStatus.PENDING },
+					data: { status: ApprovalStatus.CANCELLED, resolvedAt: new Date() },
+				});
+			}
 
 			await this.timeline.append(tx, sessionId, {
 				type: EventType.STATUS_CHANGED,

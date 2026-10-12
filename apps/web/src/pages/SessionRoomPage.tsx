@@ -1,5 +1,6 @@
-import { can, SessionStatus } from '@huddle/shared';
+import { type AgentState, can, SessionStatus } from '@huddle/shared';
 import { Link, useParams } from 'react-router';
+import { ApprovalBar } from '../components/room/ApprovalBar';
 import { DocPane } from '../components/room/DocPane';
 import { PlanPane } from '../components/room/PlanPane';
 import { RoomHeader } from '../components/room/RoomHeader';
@@ -67,11 +68,16 @@ export function SessionRoomPage() {
 				session={s}
 				presence={live.presence}
 				connection={live.status}
+				agentState={live.agent?.state ?? (s.agentState as AgentState)}
 			/>
+			<ApprovalBar session={s} me={me} />
 			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
 				<PlanPane
 					steps={s.planSteps}
-					planning={s.status === SessionStatus.PLANNING}
+					planning={
+						s.status === SessionStatus.PLANNING &&
+						s.pendingApprovals.length === 0
+					}
 					className="max-h-80 lg:max-h-none"
 				/>
 				{user && (

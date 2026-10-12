@@ -78,8 +78,15 @@ export function describeEvent(e: TimelineEventDto): {
 			return { text: 'started a step', detail: str(p.title) };
 		case EventType.STEP_COMPLETED:
 			return { text: 'finished a step', detail: str(p.title) };
-		case EventType.PLAN_UPDATED:
-			return { text: 'updated the plan' };
+		case EventType.PLAN_UPDATED: {
+			const diff = (p.diff ?? {}) as { added?: unknown; removed?: unknown };
+			const added = Array.isArray(diff.added) ? diff.added.map(String) : [];
+			if (p.reason === 'outline')
+				return { text: 'drafted an outline', detail: added.join(' · ') };
+			if (p.reason === 'revised')
+				return { text: 'revised the outline', detail: added.join(' · ') };
+			return { text: 'updated the plan', detail: str(p.summary) };
+		}
 		case EventType.TOOL_CALL:
 			return {
 				text:
