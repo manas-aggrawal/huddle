@@ -47,8 +47,11 @@ export function PlanPane({
 	steps,
 	planning,
 	gatedStepIds = new Set(),
+	footer,
 	className,
 }: {
+	/** Shown under the plan (the pinned decisions). */
+	footer?: ReactNode;
 	steps: PlanStep[];
 	/** Steps with a pending approval of their own. */
 	gatedStepIds?: Set<string>;
@@ -141,6 +144,7 @@ export function PlanPane({
 					})}
 				</ol>
 			)}
+			{footer}
 		</Pane>
 	);
 }

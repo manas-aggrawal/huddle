@@ -353,6 +353,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sessions/{id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pin a decision */
+        post: operations["DecisionsController_pin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{id}/decisions/{decisionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unpin a decision */
+        delete: operations["DecisionsController_unpin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions/{id}/messages": {
         parameters: {
             query?: never;
@@ -615,6 +649,19 @@ export interface components {
                 planStepId: string | null;
                 requestedAt: string;
             }[];
+            decisions: {
+                /** Format: uuid */
+                id: string;
+                content: string;
+                /** @enum {string} */
+                origin: "manual" | "approval" | "conflict";
+                createdBy: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                } | null;
+                pinnedAt: string;
+            }[];
         };
         UpdateSessionStatusDto: {
             /** @enum {string} */
@@ -731,6 +778,22 @@ export interface components {
             resolvedById: string | null;
             resolvedAt: string | null;
             note: string | null;
+        };
+        PinDecisionDto: {
+            content: string;
+        };
+        DecisionDto_Output: {
+            /** Format: uuid */
+            id: string;
+            content: string;
+            /** @enum {string} */
+            origin: "manual" | "approval" | "conflict";
+            createdBy: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            } | null;
+            pinnedAt: string;
         };
         CreateMessageDto: {
             /** @enum {string} */
@@ -1609,6 +1672,80 @@ export interface operations {
             };
             /** @description Someone already answered it */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DecisionsController_pin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PinDecisionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionDto_Output"];
+                };
+            };
+            /** @description Your role in this session can't pinDecision */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DecisionsController_unpin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unpinned */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Your role in this session can't pinDecision */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

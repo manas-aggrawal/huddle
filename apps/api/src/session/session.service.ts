@@ -19,7 +19,7 @@ import {
 	ForbiddenException,
 	Injectable,
 } from '@nestjs/common';
-import { Prisma, Session, SessionMember } from '@prisma/client';
+import { Decision, Prisma, Session, SessionMember } from '@prisma/client';
 import {
 	DEFAULT_MODEL_ID,
 	DEFAULT_MODEL_PROVIDER,
@@ -34,6 +34,7 @@ import {
 	UpdateSessionStatusDto,
 } from './dto/session.request';
 import {
+	DecisionDto,
 	SessionDetailDto,
 	SessionDto,
 	SessionListItemDto,
@@ -76,6 +77,25 @@ function byRoleThenJoined(
 		a.joinedAt.getTime() - b.joinedAt.getTime() ||
 		a.user.username.localeCompare(b.user.username)
 	);
+}
+
+export function toDecisionDto(
+	d: Decision & {
+		createdBy: { id: string; firstname: string; lastname: string } | null;
+	},
+): DecisionDto {
+	return {
+		id: d.id,
+		content: d.content,
+		origin: d.conflictId ? 'conflict' : d.approvalId ? 'approval' : 'manual',
+		createdBy: d.createdBy
+			? {
+					id: d.createdBy.id,
+					name: `${d.createdBy.firstname} ${d.createdBy.lastname}`.trim(),
+				}
+			: null,
+		pinnedAt: d.pinnedAt.toISOString(),
+	};
 }
 
 function toSessionDto(s: Session): SessionDto {
@@ -211,6 +231,15 @@ export class SessionService {
 					where: { status: ApprovalStatus.PENDING },
 					orderBy: { requestedAt: 'asc' },
 				},
+				decisions: {
+					where: { unpinnedAt: null },
+					orderBy: { pinnedAt: 'asc' },
+					include: {
+						createdBy: {
+							select: { id: true, firstname: true, lastname: true },
+						},
+					},
+				},
 			},
 		});
 
@@ -244,6 +273,7 @@ export class SessionService {
 				planStepId: a.planStepId,
 				requestedAt: a.requestedAt.toISOString(),
 			})),
+			decisions: session.decisions.map(toDecisionDto),
 		};
 	}
 
