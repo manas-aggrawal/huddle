@@ -77,3 +77,19 @@
 	margin-left: -10px;
 	padding-left: 8px;
 }
+
+/* The agent's [n] citations, and the Sources line a click jumps to. */
+.huddle-doc .huddle-cite {
+	color: var(--accent);
+	cursor: pointer;
+	font-size: 0.85em;
+	vertical-align: 0.1em;
+}
+.huddle-doc .huddle-cite:hover {
+	text-decoration: underline;
+}
+.huddle-doc .huddle-cite-target {
+	background: var(--accent-soft);
+	border-radius: 4px;
+	transition: background 0.3s;
+}

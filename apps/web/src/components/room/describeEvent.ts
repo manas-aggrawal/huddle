@@ -117,16 +117,22 @@ export function describeEvent(e: TimelineEventDto): {
 				detail: str(p.summary),
 			};
 		}
-		case EventType.TOOL_CALL:
-			return {
-				text:
-					str(p.tool) === 'web_search'
-						? 'searched the web'
-						: str(p.tool) === 'read_page'
-							? 'read a page'
-							: 'used a tool',
-				detail: str(p.query) ?? str(p.url),
-			};
+		case EventType.TOOL_CALL: {
+			const error = str(p.error);
+			if (str(p.tool) === 'web_search')
+				return {
+					text: `searched “${str(p.query) ?? ''}”`,
+					detail: error
+						? `Search failed: ${error}`
+						: `${Number(p.resultCount ?? 0)} results`,
+				};
+			if (str(p.tool) === 'read_page')
+				return {
+					text: error ? 'couldn’t read a page' : 'read a page',
+					detail: error ?? str(p.title),
+				};
+			return { text: 'used a tool', detail: str(p.tool) };
+		}
 		case EventType.APPROVAL_REQUESTED:
 			return { text: 'asked for approval', detail: str(p.title) };
 		case EventType.APPROVAL_RESOLVED:

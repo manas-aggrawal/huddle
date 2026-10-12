@@ -18,7 +18,15 @@ import {
 	messageStatuses,
 	showMentions,
 } from '../../lib/messages';
-import { Avatar, Badge, BotIcon, Button, cx } from '../ui';
+import {
+	Avatar,
+	Badge,
+	BotIcon,
+	Button,
+	cx,
+	PageIcon,
+	SearchIcon,
+} from '../ui';
 import { actorName, describeEvent } from './describeEvent';
 import { Pane } from './Pane';
 
@@ -118,7 +126,15 @@ export function TimelinePane({
 												<Avatar userId={e.actorId} name={name} size="sm" />
 											) : (
 												<span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-													<BotIcon size={15} />
+													{e.type === EventType.TOOL_CALL &&
+													(e.payload as { tool?: string }).tool ===
+														'web_search' ? (
+														<SearchIcon size={14} />
+													) : e.type === EventType.TOOL_CALL ? (
+														<PageIcon size={14} />
+													) : (
+														<BotIcon size={15} />
+													)}
 												</span>
 											)}
 											<div className="min-w-0 flex-1">

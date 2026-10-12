@@ -104,3 +104,15 @@ export const PlusIcon = (p: IconProps) => (
 		<path d="M12 5v14M5 12h14" />
 	</Svg>
 );
+export const SearchIcon = (p: IconProps) => (
+	<Svg {...p}>
+		<circle cx="11" cy="11" r="7" />
+		<path d="m20 20-3.5-3.5" />
+	</Svg>
+);
+export const PageIcon = (p: IconProps) => (
+	<Svg {...p}>
+		<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+		<path d="M14 3v5h5M9 13h6M9 17h6" />
+	</Svg>
+);
