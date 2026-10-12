@@ -122,7 +122,7 @@ describe('Model, effort and budgets', () => {
 			orderBy: { createdAt: 'asc' },
 		});
 		expect(records.map((r) => `${r.purpose}:${r.provider}:${r.model}`)).toEqual(
-			['outline:groq:llama-3.3-70b-versatile', 'section:ollama:qwen2.5:14b'],
+			['outline:groq:openai/gpt-oss-120b', 'section:ollama:qwen2.5:14b'],
 		);
 	});
 

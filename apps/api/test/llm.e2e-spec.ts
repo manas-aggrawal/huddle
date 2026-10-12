@@ -88,14 +88,14 @@ describe('LLM layer', () => {
 		});
 
 		expect(res.text).toBe('Notion leads on templates.');
-		expect(requested).toEqual(['groq:llama-3.3-70b-versatile']);
+		expect(requested).toEqual(['groq:openai/gpt-oss-120b']);
 		const records = await testPrisma.usageRecord.findMany({
 			where: { sessionId: id },
 		});
 		expect(records).toEqual([
 			expect.objectContaining({
 				provider: 'groq',
-				model: 'llama-3.3-70b-versatile',
+				model: 'openai/gpt-oss-120b',
 				purpose: 'outline',
 				inputTokens: 42,
 				outputTokens: 7,
@@ -337,6 +337,6 @@ describe('LLM layer', () => {
 				(m: { provider: string; modelId: string }) =>
 					`${m.provider}:${m.modelId}`,
 			),
-		).toEqual(['groq:llama-3.3-70b-versatile', 'ollama:qwen2.5:14b']);
+		).toEqual(['groq:openai/gpt-oss-120b', 'ollama:qwen2.5:14b']);
 	});
 });

@@ -66,7 +66,7 @@ describe('Sessions API', () => {
 				lastEventSeq: 1,
 				// Defaults from DEFAULT_MODEL_PROVIDER / DEFAULT_MODEL_ID
 				modelProvider: 'groq',
-				modelId: 'llama-3.3-70b-versatile',
+				modelId: 'openai/gpt-oss-120b',
 				completedAt: null,
 			});
 
@@ -398,8 +398,8 @@ describe('Sessions API', () => {
 			const models = await ctx.as('maya').get('/models').expect(200);
 			expect(models.body[0]).toEqual({
 				provider: 'groq',
-				modelId: 'llama-3.3-70b-versatile',
-				label: 'groq · llama-3.3-70b-versatile',
+				modelId: 'openai/gpt-oss-120b',
+				label: 'groq · openai/gpt-oss-120b',
 				isDefault: true,
 			});
 			await ctx
@@ -411,7 +411,7 @@ describe('Sessions API', () => {
 				.as('maya')
 				.post('/sessions')
 				.send(
-					body({ modelProvider: 'groq', modelId: 'llama-3.3-70b-versatile' }),
+					body({ modelProvider: 'groq', modelId: 'openai/gpt-oss-120b' }),
 				)
 				.expect(201);
 			await ctx.http.get('/models').expect(401);

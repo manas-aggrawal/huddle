@@ -7,7 +7,7 @@ import {
 export interface ModelOption {
 	provider: string;
 	modelId: string;
-	/** "groq · llama-3.3-70b-versatile" */
+	/** "groq · openai/gpt-oss-120b" */
 	label: string;
 	isDefault: boolean;
 }

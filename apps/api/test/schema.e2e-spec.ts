@@ -28,7 +28,7 @@ describe('schema rules and timeline', () => {
 				workspaceId: membership.workspaceId,
 				title,
 				goal: 'Compare the top 5 note-taking apps',
-				modelId: 'llama-3.3-70b-versatile',
+				modelId: 'openai/gpt-oss-120b',
 				members: {
 					create: { userId: ctx.users.maya.id, role: SessionRole.OWNER },
 				},
