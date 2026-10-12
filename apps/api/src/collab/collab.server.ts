@@ -2,7 +2,14 @@ import type { Server as HttpServer, IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { Database } from '@hocuspocus/extension-database';
 import { Hocuspocus, onAuthenticatePayload } from '@hocuspocus/server';
-import { COLLAB_PATH, EventType, SessionRole } from '@huddle/shared';
+import {
+	ApprovalKind,
+	ApprovalStatus,
+	COLLAB_PATH,
+	EventType,
+	SessionRole,
+	SessionStatus,
+} from '@huddle/shared';
 import {
 	BeforeApplicationShutdown,
 	Injectable,
@@ -187,7 +194,13 @@ export class CollabServer
 		if (!membership) throw new Error('Session not found');
 
 		const role = membership.role as SessionRole;
-		connectionConfig.readOnly = role === SessionRole.VIEWER;
+		const session = await this.prisma.session.findUnique({
+			where: { id: documentName },
+			select: { status: true },
+		});
+		// A finished document is read-only for everyone.
+		connectionConfig.readOnly =
+			role === SessionRole.VIEWER || session?.status === SessionStatus.DONE;
 		return { userId: payload.id, sessionId: documentName, role };
 	}
 
@@ -214,6 +227,21 @@ export class CollabServer
 	}
 
 	private onTimelineEvent(event: TimelineEvent) {
+		// The session just ended (final draft approved, or the Owner ended it):
+		// reconnect everyone, which brings them back read-only.
+		const p = event.payload as { kind?: string; status?: string; to?: unknown };
+		const ended =
+			(event.type === EventType.APPROVAL_RESOLVED &&
+				p.kind === ApprovalKind.MARK_FINAL &&
+				p.status === ApprovalStatus.APPROVED) ||
+			(event.type === EventType.STATUS_CHANGED && p.to === SessionStatus.DONE);
+		if (ended) {
+			const doc = this.hocuspocus.documents.get(event.sessionId);
+			for (const connection of doc?.getConnections() ?? []) {
+				connection.webSocket.close(RECONNECT.code, RECONNECT.reason);
+			}
+			return;
+		}
 		if (
 			event.type !== EventType.MEMBER_REMOVED &&
 			event.type !== EventType.ROLE_CHANGED

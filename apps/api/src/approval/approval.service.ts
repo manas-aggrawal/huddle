@@ -5,6 +5,8 @@ import {
 	ApprovalStatus,
 	BLOCKING_APPROVAL_KINDS,
 	EventType,
+	MessageMode,
+	MessageStatus,
 	NotificationType,
 	SessionRole,
 	SessionStatus,
@@ -176,8 +178,33 @@ export class ApprovalService {
 				actorId: userId,
 				payload: { ...payload, actor, resolvedBy: actor },
 			});
+			// "Not final yet: …" is feedback for the agent to work on, as a Suggest.
+			if (approval.kind === ApprovalKind.MARK_FINAL && !approved && dto.note) {
+				const message = await tx.message.create({
+					data: {
+						sessionId,
+						authorId: userId,
+						mode: MessageMode.SUGGEST,
+						status: MessageStatus.QUEUED,
+						content: dto.note,
+					},
+				});
+				await this.timeline.append(tx, sessionId, {
+					type: EventType.HUMAN_MESSAGE,
+					actorType: ActorType.USER,
+					actorId: userId,
+					payload: {
+						actor,
+						messageId: message.id,
+						mode: message.mode,
+						content: message.content,
+						author: { ...actor, role: membership.role },
+						via: 'final_rejected',
+					},
+				});
+			}
 			// A note on an answer is something the team decided: pin it.
-			if (dto.note) {
+			if (dto.note && approval.kind !== ApprovalKind.MARK_FINAL) {
 				await this.decisions.pin(tx, sessionId, {
 					content: `On “${approval.title}”: ${dto.note}`,
 					createdById: userId,
