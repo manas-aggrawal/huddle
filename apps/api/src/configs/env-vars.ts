@@ -17,9 +17,9 @@ export const {
 	WEB_APP_URL = 'http://localhost:5173',
 	// Model a new session uses when the creator doesn't pick one
 	DEFAULT_MODEL_PROVIDER = 'groq',
-	DEFAULT_MODEL_ID = 'llama-3.3-70b-versatile',
+	DEFAULT_MODEL_ID = 'openai/gpt-oss-120b',
 	// Models people can pick, "provider:modelId" comma-separated (the default is always included),
-	// e.g. "groq:llama-3.3-70b-versatile,ollama:qwen2.5:14b"
+	// e.g. "groq:openai/gpt-oss-120b,ollama:qwen2.5:14b"
 	MODELS,
 	// Provider credentials and endpoints (see src/llm/providers.ts)
 	GROQ_API_KEY,

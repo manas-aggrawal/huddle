@@ -54,7 +54,7 @@ npm run dev
 
 The agent needs one model provider. Both are free:
 
-- **Groq** (hosted, fast): create a key at https://console.groq.com/keys and set `GROQ_API_KEY` in `apps/api/.env`. The default model is `groq:llama-3.3-70b-versatile`.
+- **Groq** (hosted, fast): create a key at https://console.groq.com/keys and set `GROQ_API_KEY` in `apps/api/.env`. The default model is `groq:openai/gpt-oss-120b`.
 - **Ollama** (local): install [Ollama](https://ollama.com), `ollama pull qwen2.5:14b`, and list it in `MODELS`, for example `MODELS=ollama:qwen2.5:14b`. To make it the default, set `DEFAULT_MODEL_PROVIDER=ollama` and `DEFAULT_MODEL_ID=qwen2.5:14b`.
 
 The Owner can switch models per session from the header; the change applies from the agent's next step. Tests never call a real model.
@@ -68,7 +68,7 @@ The Owner can switch models per session from the header; the change applies from
 | `ACCESS_TOKEN_TTL` / `REFRESH_TOKEN_TTL` | `1h` / `8h` | Token lifetimes (`30s`, `15m`, …) |
 | `ALLOWED_ORIGINS` | | Web app origins allowed by CORS and the realtime socket |
 | `WEB_APP_URL` | `http://localhost:5173` | Where invite links point |
-| `DEFAULT_MODEL_PROVIDER` / `DEFAULT_MODEL_ID` | `groq` / `llama-3.3-70b-versatile` | Model for new sessions |
+| `DEFAULT_MODEL_PROVIDER` / `DEFAULT_MODEL_ID` | `groq` / `openai/gpt-oss-120b` | Model for new sessions |
 | `MODELS` | | Other models people can pick, `provider:modelId` comma-separated |
 | `GROQ_API_KEY` | | Groq key |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Where Ollama listens |
