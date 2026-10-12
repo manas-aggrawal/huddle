@@ -21,6 +21,7 @@ export function agentHarness(options: Partial<AgentOptions> = {}) {
 				useValue: {
 					enabled: true,
 					flushMs: 10,
+					research: false,
 					...options,
 				} satisfies AgentOptions,
 			},

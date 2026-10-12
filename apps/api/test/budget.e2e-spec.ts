@@ -231,10 +231,11 @@ describe('Model, effort and budgets', () => {
 			.patch(`/workspaces/${workspaceId}/allowance`)
 			.send({ tokenAllowance: 5_000_000 })
 			.expect(200);
+		// One resumes; its short sections can finish (and wait on the final draft) at once.
 		expect(
 			(await testPrisma.session.findUniqueOrThrow({ where: { id: one.id } }))
 				.status,
-		).toBe(SessionStatus.RUNNING);
+		).not.toBe(SessionStatus.PAUSED);
 		// Two was waiting on its outline when it was paused; it goes back to that.
 		expect(
 			(await testPrisma.session.findUniqueOrThrow({ where: { id: two.id } }))
