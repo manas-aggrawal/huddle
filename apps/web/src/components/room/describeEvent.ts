@@ -62,18 +62,30 @@ export function describeEvent(e: TimelineEventDto): {
 					: `stopped ${who} from approving`,
 			};
 		}
-		case EventType.HUMAN_MESSAGE:
+		case EventType.HUMAN_MESSAGE: {
+			const mode = str(p.mode);
+			const anchor = p.anchor as P | null | undefined;
 			return {
 				text:
-					str(p.mode)?.toLowerCase() === 'interrupt'
-						? 'interrupted'
-						: 'wrote to the agent',
+					mode === 'INTERRUPT'
+						? 'interrupted the agent'
+						: mode === 'ASK'
+							? 'asked'
+							: mode === 'COMMENT'
+								? `commented on “${str(anchor?.quote)?.slice(0, 60) ?? 'the doc'}”`
+								: 'suggested',
 				detail: str(p.content),
 			};
+		}
 		case EventType.AGENT_MESSAGE:
 			return { text: 'said', detail: str(p.text) ?? str(p.content) };
-		case EventType.AGENT_ACK:
-			return { text: 'acknowledged a message', detail: str(p.reply) };
+		case EventType.AGENT_ACK: {
+			const who = nameOf(p.author);
+			return {
+				text: who ? `replied to ${who}` : 'acknowledged a message',
+				detail: str(p.reply),
+			};
+		}
 		case EventType.STEP_STARTED:
 			return { text: 'started a step', detail: str(p.title) };
 		case EventType.STEP_COMPLETED:

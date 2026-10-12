@@ -127,3 +127,16 @@ export const SessionLimits = {
 	GOAL_MAX: 5000,
 	CONTEXT_MAX: 10_000,
 } as const;
+
+/** Limits for messages to the agent. */
+export const MessageLimits = {
+	CONTENT_MAX: 4000,
+} as const;
+
+/** How a person is mentioned in message content: @[userId]. A fresh regex each call (it's global). */
+export const mentionPattern = () => /@\[([0-9a-f-]{36})\]/gi;
+
+/** The distinct user ids mentioned in a message. */
+export function mentionedUserIds(content: string): string[] {
+	return [...new Set([...content.matchAll(mentionPattern())].map((m) => m[1]))];
+}

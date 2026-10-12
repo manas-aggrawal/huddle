@@ -1,6 +1,8 @@
 import { type AgentState, can, SessionStatus } from '@huddle/shared';
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router';
 import { ApprovalBar } from '../components/room/ApprovalBar';
+import { Composer } from '../components/room/Composer';
 import { DocPane } from '../components/room/DocPane';
 import { PlanPane } from '../components/room/PlanPane';
 import { RoomHeader } from '../components/room/RoomHeader';
@@ -8,7 +10,12 @@ import { TimelinePane } from '../components/room/TimelinePane';
 import { useSessionSocket } from '../hooks/useSessionSocket';
 import { ApiError } from '../lib/api';
 import { fullName, useAuth } from '../lib/auth';
-import { asRole, useRefetchOnEvents, useSessionDetail } from '../lib/session';
+import {
+	asRole,
+	memberName,
+	useRefetchOnEvents,
+	useSessionDetail,
+} from '../lib/session';
 
 /**
  * The session room: header, then plan | document | timeline. On narrow
@@ -21,6 +28,13 @@ export function SessionRoomPage() {
 	// Join the live room only once we know we're a member.
 	const live = useSessionSocket(session.data ? sessionId : undefined);
 	useRefetchOnEvents(sessionId, live.events);
+	const names = useMemo(
+		() =>
+			new Map(
+				(session.data?.members ?? []).map((m) => [m.userId, memberName(m)]),
+			),
+		[session.data?.members],
+	);
 
 	if (session.isPending) {
 		return (
@@ -89,7 +103,24 @@ export function SessionRoomPage() {
 						className="min-h-[24rem]"
 					/>
 				)}
-				<TimelinePane events={live.events} className="h-[28rem] lg:h-auto" />
+				<TimelinePane
+					events={live.events}
+					names={names}
+					className="h-[32rem] lg:h-auto"
+					footer={
+						user && (
+							<Composer
+								sessionId={s.id}
+								me={me}
+								myUserId={user.id}
+								members={s.members}
+								presence={live.presence}
+								askOnly={s.status === SessionStatus.DONE}
+								onTyping={(typing) => live.updatePresence({ typing })}
+							/>
+						)
+					}
+				/>
 			</div>
 		</main>
 	);

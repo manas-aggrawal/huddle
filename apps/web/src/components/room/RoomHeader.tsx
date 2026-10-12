@@ -1,4 +1,9 @@
-import type { AgentState, PresenceMember, SessionStatus } from '@huddle/shared';
+import {
+	type AgentState,
+	can,
+	type PresenceMember,
+	type SessionStatus,
+} from '@huddle/shared';
 import { useState } from 'react';
 import type { ConnectionStatus } from '../../hooks/useSessionSocket';
 import { AGENT_LABEL, STATUS_LABEL } from '../../lib/labels';
@@ -28,10 +33,13 @@ export function RoomHeader({
 }) {
 	const agentLabel = AGENT_LABEL[agentState];
 	const [inviting, setInviting] = useState(false);
-	const status = STATUS_LABEL[session.status as SessionStatus];
+	const me = { role: asRole(session.myRole), canApprove: session.myCanApprove };
+	const status =
+		session.status === 'WAITING' && !can(me, 'approve')
+			? { label: 'Waiting for approval', tone: 'warn' as const }
+			: STATUS_LABEL[session.status as SessionStatus];
 	const owner = session.members.find((m) => m.role === 'OWNER');
 	const conn = CONNECTION[connection];
-	const me = { role: asRole(session.myRole), canApprove: session.myCanApprove };
 
 	return (
 		<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line bg-surface px-4 py-3">
