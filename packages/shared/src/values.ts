@@ -72,6 +72,16 @@ export const ApprovalKind = {
 } as const;
 export type ApprovalKind = ValueOf<typeof ApprovalKind>;
 
+/**
+ * Approvals that stop the whole session (status WAITING). The others gate
+ * only their own plan step; the agent keeps working on the rest.
+ */
+export const BLOCKING_APPROVAL_KINDS: readonly ApprovalKind[] = [
+	ApprovalKind.OUTLINE,
+	ApprovalKind.MARK_FINAL,
+	ApprovalKind.BUDGET,
+];
+
 export const ApprovalStatus = {
 	PENDING: 'PENDING',
 	APPROVED: 'APPROVED',

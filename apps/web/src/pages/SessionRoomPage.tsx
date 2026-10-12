@@ -1,7 +1,11 @@
-import { type AgentState, can, SessionStatus } from '@huddle/shared';
-import { useMemo } from 'react';
+import { type AgentState, can, EventType, SessionStatus } from '@huddle/shared';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { ApprovalBar } from '../components/room/ApprovalBar';
+import {
+	ApprovalBar,
+	ApprovalCard,
+	approvalOutcomes,
+} from '../components/room/ApprovalBar';
 import { Composer } from '../components/room/Composer';
 import { DocPane } from '../components/room/DocPane';
 import { PlanPane } from '../components/room/PlanPane';
@@ -35,6 +39,8 @@ export function SessionRoomPage() {
 			),
 		[session.data?.members],
 	);
+	const outcomes = useMemo(() => approvalOutcomes(live.events), [live.events]);
+	const [draft, setDraft] = useState<{ text: string; n: number } | null>(null);
 
 	if (session.isPending) {
 		return (
@@ -88,6 +94,13 @@ export function SessionRoomPage() {
 			<div className="grid min-h-0 flex-1 gap-px bg-line lg:grid-cols-[17rem_minmax(0,1fr)_21rem]">
 				<PlanPane
 					steps={s.planSteps}
+					gatedStepIds={
+						new Set(
+							s.pendingApprovals
+								.map((a) => a.planStepId)
+								.filter((x): x is string => Boolean(x)),
+						)
+					}
 					planning={
 						s.status === SessionStatus.PLANNING &&
 						s.pendingApprovals.length === 0
@@ -106,6 +119,30 @@ export function SessionRoomPage() {
 				<TimelinePane
 					events={live.events}
 					names={names}
+					renderExtra={(e) => {
+						if (e.type !== EventType.APPROVAL_REQUESTED) return null;
+						const p = e.payload as {
+							approvalId: string;
+							kind: string;
+							title: string;
+						};
+						return (
+							<ApprovalCard
+								sessionId={s.id}
+								approvalId={p.approvalId}
+								kind={p.kind}
+								pending={s.pendingApprovals.some((a) => a.id === p.approvalId)}
+								outcome={outcomes.get(p.approvalId)}
+								canApprove={can(me, 'approve')}
+								onDiscuss={() =>
+									setDraft((d) => ({
+										text: `About “${p.title}”: `,
+										n: (d?.n ?? 0) + 1,
+									}))
+								}
+							/>
+						);
+					}}
 					className="h-[32rem] lg:h-auto"
 					footer={
 						user && (
@@ -117,6 +154,7 @@ export function SessionRoomPage() {
 								presence={live.presence}
 								askOnly={s.status === SessionStatus.DONE}
 								onTyping={(typing) => live.updatePresence({ typing })}
+								draft={draft}
 							/>
 						)
 					}

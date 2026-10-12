@@ -27,6 +27,7 @@ export function TimelinePane({
 	events,
 	names,
 	footer,
+	renderExtra,
 	className,
 }: {
 	events: TimelineEventDto[];
@@ -34,6 +35,8 @@ export function TimelinePane({
 	names: Map<string, string>;
 	/** The composer, pinned under the list. */
 	footer?: ReactNode;
+	/** Extra content under an event (e.g. an approval card). */
+	renderExtra?: (event: TimelineEventDto) => ReactNode;
 	className?: string;
 }) {
 	const statuses = useMemo(() => messageStatuses(events), [events]);
@@ -134,6 +137,7 @@ export function TimelinePane({
 														{showMentions(detail, names)}
 													</p>
 												)}
+												{renderExtra?.(e)}
 												<div className="flex items-center gap-2">
 													{status && (
 														<Badge tone={status.tone}>{status.label}</Badge>

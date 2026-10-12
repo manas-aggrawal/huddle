@@ -3,10 +3,12 @@ import {
 	AgentState,
 	ApprovalKind,
 	ApprovalStatus,
+	BLOCKING_APPROVAL_KINDS,
 	EventType,
 	NotificationType,
 	SessionRole,
 	SessionStatus,
+	StepStatus,
 } from '@huddle/shared';
 import {
 	BadRequestException,
@@ -63,13 +65,15 @@ export class ApprovalService {
 				planStepId: req.planStepId ?? null,
 			},
 		});
-		await tx.session.updateMany({
-			where: {
-				id: sessionId,
-				status: { in: [SessionStatus.PLANNING, SessionStatus.RUNNING] },
-			},
-			data: { status: SessionStatus.WAITING, agentState: AgentState.IDLE },
-		});
+		if (BLOCKING_APPROVAL_KINDS.includes(req.kind)) {
+			await tx.session.updateMany({
+				where: {
+					id: sessionId,
+					status: { in: [SessionStatus.PLANNING, SessionStatus.RUNNING] },
+				},
+				data: { status: SessionStatus.WAITING, agentState: AgentState.IDLE },
+			});
+		}
 
 		const approvers = await tx.sessionMember.findMany({
 			where: {
@@ -190,13 +194,25 @@ export class ApprovalService {
 		if (session.status === SessionStatus.DONE) {
 			throw new ConflictException('This session has ended');
 		}
-		const stillPending = await tx.approval.count({
-			where: { sessionId, status: ApprovalStatus.PENDING },
+		const kind = approval.kind as ApprovalKind;
+		// A rejected step gate drops that step; the rest of the plan goes on.
+		if (kind === ApprovalKind.CUSTOM && !approved && approval.planStepId) {
+			await tx.planStep.updateMany({
+				where: { id: approval.planStepId, status: { not: StepStatus.DONE } },
+				data: { status: StepStatus.SKIPPED },
+			});
+		}
+
+		const stillBlocked = await tx.approval.count({
+			where: {
+				sessionId,
+				status: ApprovalStatus.PENDING,
+				kind: { in: [...BLOCKING_APPROVAL_KINDS] },
+			},
 		});
 		// A paused session stays paused; resuming picks up from here.
-		if (session.status !== SessionStatus.WAITING || stillPending > 0) return;
+		if (session.status !== SessionStatus.WAITING || stillBlocked > 0) return;
 
-		const kind = approval.kind as ApprovalKind;
 		if (kind === ApprovalKind.OUTLINE && !approved) {
 			await tx.session.update({
 				where: { id: sessionId },

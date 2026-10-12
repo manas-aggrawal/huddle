@@ -46,9 +46,12 @@ const STATUS: Record<
 export function PlanPane({
 	steps,
 	planning,
+	gatedStepIds = new Set(),
 	className,
 }: {
 	steps: PlanStep[];
+	/** Steps with a pending approval of their own. */
+	gatedStepIds?: Set<string>;
 	/** Session is in PLANNING: the agent is drafting the outline. */
 	planning: boolean;
 	className?: string;
@@ -113,6 +116,11 @@ export function PlanPane({
 										<span className="text-muted">{i + 1}. </span>
 										{step.title}
 									</p>
+									{gatedStepIds.has(step.id) && (
+										<p className="mt-0.5 text-xs font-medium text-warn">
+											Waiting for approval
+										</p>
+									)}
 									{step.description && (
 										<p className="mt-0.5 line-clamp-2 text-xs text-muted">
 											{step.description}
