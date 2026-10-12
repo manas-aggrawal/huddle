@@ -99,6 +99,11 @@ export const SessionDetailSchema = SessionSchema.extend({
 	decisions: z.array(DecisionSchema),
 	/** Conflicts waiting for the Owner. */
 	openConflicts: z.array(OpenConflictSchema),
+	/** The workspace's shared token pool, for the budget meter. */
+	workspaceUsage: z.object({
+		tokenAllowance: z.number().int(),
+		tokensUsedThisPeriod: z.number().int(),
+	}),
 	/** The latest handoff, with its briefing (the new Owner sees it as a card). */
 	lastHandoff: z
 		.object({

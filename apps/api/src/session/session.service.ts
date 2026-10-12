@@ -38,6 +38,7 @@ import {
 	ListSessionsQueryDto,
 	StatusAction,
 	UpdateSessionStatusDto,
+	UpdateSettingsDto,
 } from './dto/session.request';
 import {
 	DecisionDto,
@@ -260,6 +261,9 @@ export class SessionService {
 					where: { resolvedAt: null },
 					orderBy: { createdAt: 'asc' },
 				},
+				workspace: {
+					select: { tokenAllowance: true, tokensUsedThisPeriod: true },
+				},
 				handoffs: {
 					orderBy: { createdAt: 'desc' },
 					take: 1,
@@ -317,6 +321,7 @@ export class SessionService {
 				planStepId: c.planStepId,
 				createdAt: c.createdAt.toISOString(),
 			})),
+			workspaceUsage: session.workspace,
 			lastHandoff: session.handoffs[0]
 				? toHandoffDto(session.handoffs[0])
 				: null,
@@ -409,6 +414,154 @@ export class SessionService {
 		if (pendingApprovals > 0) return SessionStatus.WAITING;
 		if (planSteps === 0) return SessionStatus.PLANNING;
 		return SessionStatus.RUNNING;
+	}
+
+	/**
+	 * Model, effort and the session's token cap. Owner only. Applies from the
+	 * agent's next model call. Raising the cap past what's used clears a
+	 * pending budget approval.
+	 */
+	async updateSettings(
+		membership: SessionMember,
+		dto: UpdateSettingsDto,
+	): Promise<SessionDto> {
+		const sessionId = membership.sessionId;
+		if (
+			dto.modelProvider !== undefined &&
+			dto.modelId !== undefined &&
+			!isAllowedModel(dto.modelProvider, dto.modelId)
+		) {
+			throw new BadRequestException(
+				`Model ${dto.modelProvider}:${dto.modelId} isn't available. GET /models lists the ones you can use.`,
+			);
+		}
+		const session = await this.timeline.transaction(async (tx) => {
+			const before = await tx.session.findUniqueOrThrow({
+				where: { id: sessionId },
+			});
+			if (before.status === SessionStatus.DONE) {
+				throw new ConflictException('This session is done');
+			}
+			const updated = await tx.session.update({
+				where: { id: sessionId },
+				data: {
+					...(dto.modelProvider !== undefined
+						? { modelProvider: dto.modelProvider, modelId: dto.modelId }
+						: {}),
+					...(dto.effort !== undefined ? { effort: dto.effort } : {}),
+					...(dto.tokenBudget !== undefined
+						? { tokenBudget: dto.tokenBudget }
+						: {}),
+				},
+			});
+			const capCleared =
+				updated.tokenBudget === null ||
+				updated.tokenBudget > updated.tokensUsed;
+			if (dto.tokenBudget !== undefined && capCleared) {
+				await this.clearBudgetGate(tx, sessionId);
+			}
+			await this.timeline.append(tx, sessionId, {
+				type: EventType.MODEL_CHANGED,
+				actorType: ActorType.USER,
+				actorId: membership.userId,
+				payload: {
+					actor: await this.timeline.actorSnapshot(tx, membership.userId),
+					modelProvider: updated.modelProvider,
+					modelId: updated.modelId,
+					effort: updated.effort,
+					tokenBudget: updated.tokenBudget,
+					from: {
+						modelProvider: before.modelProvider,
+						modelId: before.modelId,
+						effort: before.effort,
+						tokenBudget: before.tokenBudget,
+					},
+				},
+			});
+			return tx.session.findUniqueOrThrow({ where: { id: sessionId } });
+		});
+		return toSessionDto(session);
+	}
+
+	/** A pending budget approval is moot once the cap is raised: cancel it and carry on. */
+	private async clearBudgetGate(
+		tx: Prisma.TransactionClient,
+		sessionId: string,
+	) {
+		const { count } = await tx.approval.updateMany({
+			where: {
+				sessionId,
+				kind: ApprovalKind.BUDGET,
+				status: ApprovalStatus.PENDING,
+			},
+			data: { status: ApprovalStatus.CANCELLED, resolvedAt: new Date() },
+		});
+		if (count === 0) return;
+		const to = await this.statusToResumeTo(tx, sessionId);
+		await tx.session.updateMany({
+			where: { id: sessionId, status: SessionStatus.WAITING },
+			data: { status: to },
+		});
+	}
+
+	/**
+	 * Pauses a session for a system reason (the workspace pool ran out), with a
+	 * STATUS_CHANGED by Huddle and a BUDGET_WARNING saying why.
+	 */
+	async pauseBySystem(
+		sessionId: string,
+		reason: string,
+		details: Record<string, number>,
+	) {
+		await this.timeline.transaction(async (tx) => {
+			const current = await tx.session.findUniqueOrThrow({
+				where: { id: sessionId },
+			});
+			const from = current.status as SessionStatus;
+			if (!ALLOWED_FROM.pause.includes(from)) return;
+			await tx.session.update({
+				where: { id: sessionId },
+				data: { status: SessionStatus.PAUSED, agentState: AgentState.IDLE },
+			});
+			await this.timeline.append(tx, sessionId, {
+				type: EventType.STATUS_CHANGED,
+				actorType: ActorType.SYSTEM,
+				payload: { action: 'pause', from, to: SessionStatus.PAUSED, reason },
+			});
+			await this.timeline.append(tx, sessionId, {
+				type: EventType.BUDGET_WARNING,
+				actorType: ActorType.SYSTEM,
+				payload: { reason, ...details },
+			});
+		});
+	}
+
+	/** Undoes pauseBySystem when its reason is gone (only for sessions it paused). */
+	async resumeBySystem(sessionId: string, reason: string) {
+		await this.timeline.transaction(async (tx) => {
+			const current = await tx.session.findUniqueOrThrow({
+				where: { id: sessionId },
+			});
+			if (current.status !== SessionStatus.PAUSED) return;
+			const lastStatus = await tx.timelineEvent.findFirst({
+				where: { sessionId, type: EventType.STATUS_CHANGED },
+				orderBy: { seq: 'desc' },
+			});
+			if (
+				(lastStatus?.payload as { reason?: string } | null)?.reason !== reason
+			)
+				return;
+			const to = await this.statusToResumeTo(tx, sessionId);
+			await tx.session.update({
+				where: { id: sessionId },
+				data: { status: to },
+			});
+			await this.timeline.append(tx, sessionId, {
+				type: EventType.STATUS_CHANGED,
+				actorType: ActorType.SYSTEM,
+				payload: { action: 'resume', from: SessionStatus.PAUSED, to, reason },
+			});
+		});
 	}
 
 	/** The workspace to create in: the one given (if the caller belongs to it), else their personal one. */

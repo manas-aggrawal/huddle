@@ -129,6 +129,8 @@ export const NotificationType = {
 	MENTION: 'MENTION',
 	CONFLICT_RAISED: 'CONFLICT_RAISED',
 	HANDOFF_RECEIVED: 'HANDOFF_RECEIVED',
+	/** The workspace's token pool ran out; only workspace admins can raise it. */
+	POOL_EXHAUSTED: 'POOL_EXHAUSTED',
 } as const;
 export type NotificationType = ValueOf<typeof NotificationType>;
 
@@ -156,3 +158,6 @@ export function mentionedUserIds(content: string): string[] {
 export const DecisionLimits = {
 	CONTENT_MAX: 1000,
 } as const;
+
+/** What one approval of a session's cap adds, in tokens. */
+export const BUDGET_STEP_TOKENS = 200_000;

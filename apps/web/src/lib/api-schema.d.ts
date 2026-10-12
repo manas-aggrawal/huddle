@@ -233,6 +233,23 @@ export interface paths {
         patch: operations["SessionController_changeStatus"];
         trace?: never;
     };
+    "/sessions/{id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change model, effort or token cap */
+        patch: operations["SessionController_updateSettings"];
+        trace?: never;
+    };
     "/sessions/{id}/members/{userId}": {
         parameters: {
             query?: never;
@@ -541,6 +558,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Token usage of a workspace */
+        get: operations["WorkspaceController_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{id}/allowance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change the token allowance */
+        patch: operations["WorkspaceController_setAllowance"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -806,6 +857,10 @@ export interface components {
                 planStepId: string | null;
                 createdAt: string;
             }[];
+            workspaceUsage: {
+                tokenAllowance: number;
+                tokensUsedThisPeriod: number;
+            };
             lastHandoff: {
                 /** Format: uuid */
                 id: string;
@@ -827,6 +882,14 @@ export interface components {
         UpdateSessionStatusDto: {
             /** @enum {string} */
             action: "pause" | "resume" | "end";
+        };
+        UpdateSettingsDto: {
+            modelProvider?: string;
+            modelId?: string;
+            /** @enum {string} */
+            effort?: "LOW" | "MEDIUM" | "HIGH";
+            /** @description Cap for this session; null removes the cap */
+            tokenBudget?: number | null;
         };
         UpdateMemberDto: {
             /**
@@ -1083,6 +1146,16 @@ export interface components {
             briefing: string;
             note: string | null;
             createdAt: string;
+        };
+        WorkspaceUsageDto_Output: {
+            /** Format: uuid */
+            workspaceId: string;
+            tokenAllowance: number;
+            tokensUsedThisPeriod: number;
+            periodStart: string;
+        };
+        SetAllowanceDto: {
+            tokenAllowance: number;
         };
     };
     responses: never;
@@ -1595,6 +1668,45 @@ export interface operations {
             };
             /** @description That change isn't possible from the current status */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionController_updateSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionDto_Output"];
+                };
+            };
+            /** @description Your role in this session can't changeSettings */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2437,6 +2549,59 @@ export interface operations {
             };
             /** @description Session not found, or you are not a member */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    WorkspaceController_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceUsageDto_Output"];
+                };
+            };
+        };
+    };
+    WorkspaceController_setAllowance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAllowanceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceUsageDto_Output"];
+                };
+            };
+            /** @description Not a workspace admin */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

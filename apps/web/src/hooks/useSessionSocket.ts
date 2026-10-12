@@ -4,6 +4,7 @@ import {
 	type PresenceMember,
 	type PresenceUpdateRequest,
 	type SessionJoinAck,
+	type SessionUsage,
 	SocketEvent,
 	type TimelineEventDto,
 } from '@huddle/shared';
@@ -27,6 +28,8 @@ export interface SessionSocketState {
 	removed: boolean;
 	/** What the agent is doing, from live updates. Null until the first one arrives. */
 	agent: { state: AgentState; stepId: string | null } | null;
+	/** Token use after the latest model call. Null until one happens. */
+	usage: SessionUsage | null;
 	/** Send what you're looking at / whether you're typing (rate limited server-side). */
 	updatePresence: (change: Omit<PresenceUpdateRequest, 'sessionId'>) => void;
 }
@@ -59,6 +62,7 @@ export function useSessionSocket(
 	const [error, setError] = useState<SessionSocketState['error']>(null);
 	const [removed, setRemoved] = useState(false);
 	const [agent, setAgent] = useState<SessionSocketState['agent']>(null);
+	const [usage, setUsage] = useState<SessionUsage | null>(null);
 	const lastSeq = useRef(0);
 
 	useEffect(() => {
@@ -71,6 +75,7 @@ export function useSessionSocket(
 		setError(null);
 		setRemoved(false);
 		setAgent(null);
+		setUsage(null);
 		setStatus(socket.connected ? 'live' : 'connecting');
 
 		const apply = (incoming: TimelineEventDto[]) => {
@@ -136,6 +141,9 @@ export function useSessionSocket(
 			if (p.sessionId === sessionId)
 				setAgent({ state: p.agentState, stepId: p.stepId });
 		};
+		const onUsage = (u: SessionUsage) => {
+			if (u.sessionId === sessionId) setUsage(u);
+		};
 		const onRemoved = (p: { sessionId: string }) => {
 			if (p.sessionId !== sessionId) return;
 			setRemoved(true);
@@ -150,6 +158,7 @@ export function useSessionSocket(
 		socket.on(SocketEvent.PRESENCE_CHANGED, onPresenceChanged);
 		socket.on(SocketEvent.SESSION_REMOVED, onRemoved);
 		socket.on(SocketEvent.AGENT_STATE, onAgentState);
+		socket.on(SocketEvent.USAGE, onUsage);
 		if (socket.connected) void join();
 
 		return () => {
@@ -162,6 +171,7 @@ export function useSessionSocket(
 			socket.off(SocketEvent.PRESENCE_CHANGED, onPresenceChanged);
 			socket.off(SocketEvent.SESSION_REMOVED, onRemoved);
 			socket.off(SocketEvent.AGENT_STATE, onAgentState);
+			socket.off(SocketEvent.USAGE, onUsage);
 			if (socket.connected)
 				socket.emit(SocketEvent.SESSION_LEAVE, { sessionId }, () => undefined);
 		};
@@ -182,6 +192,7 @@ export function useSessionSocket(
 		error,
 		removed,
 		agent,
+		usage,
 		updatePresence,
 	};
 }

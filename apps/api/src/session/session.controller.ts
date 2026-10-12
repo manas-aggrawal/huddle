@@ -24,6 +24,7 @@ import {
 	CreateSessionDto,
 	ListSessionsQueryDto,
 	UpdateSessionStatusDto,
+	UpdateSettingsDto,
 } from './dto/session.request';
 import {
 	SessionDetailDto,
@@ -86,5 +87,18 @@ export class SessionController {
 		@Body() body: UpdateSessionStatusDto,
 	): Promise<SessionDto> {
 		return this.sessions.changeStatus(membership, body);
+	}
+
+	/** Model, effort and token cap. Owner only; applies from the agent's next model call. */
+	@Patch(':id/settings')
+	@RequireSessionAction('changeSettings')
+	@ApiOperation({ summary: 'Change model, effort or token cap' })
+	@ZodResponse({ status: 200, type: SessionDto })
+	updateSettings(
+		@Param('id') _id: string,
+		@CurrentMembership() membership: SessionMember,
+		@Body() body: UpdateSettingsDto,
+	): Promise<SessionDto> {
+		return this.sessions.updateSettings(membership, body);
 	}
 }

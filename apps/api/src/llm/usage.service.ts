@@ -1,5 +1,7 @@
+import { SocketEvent } from '@huddle/shared';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@src/prisma/prisma.service';
+import { BroadcastService } from '@src/realtime/broadcast.service';
 import { BudgetExceededError, PoolExhaustedError } from './errors';
 
 export interface UsageEntry {
@@ -33,7 +35,10 @@ function periodCutoff(now = new Date()): Date {
  */
 @Injectable()
 export class UsageService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly broadcast: BroadcastService,
+	) {}
 
 	/**
 	 * Starts a new period if the workspace's is over a month old, then refuses
@@ -90,17 +95,26 @@ export class UsageService {
 	/** Writes the UsageRecord and adds its tokens to the session and workspace totals, together. */
 	async record(entry: UsageEntry): Promise<void> {
 		const total = entry.inputTokens + entry.outputTokens;
-		await this.prisma.$transaction(async (tx) => {
+		const usage = await this.prisma.$transaction(async (tx) => {
 			await tx.usageRecord.create({ data: entry });
 			const session = await tx.session.update({
 				where: { id: entry.sessionId },
 				data: { tokensUsed: { increment: total } },
-				select: { workspaceId: true },
+				select: { workspaceId: true, tokensUsed: true, tokenBudget: true },
 			});
-			await tx.workspace.update({
+			const workspace = await tx.workspace.update({
 				where: { id: session.workspaceId },
 				data: { tokensUsedThisPeriod: { increment: total } },
+				select: { tokensUsedThisPeriod: true, tokenAllowance: true },
 			});
+			return { session, workspace };
+		});
+		// Live budget meter. (Other sessions in the workspace see the pool on their next call.)
+		this.broadcast.toSession(entry.sessionId, SocketEvent.USAGE, {
+			sessionId: entry.sessionId,
+			tokensUsed: usage.session.tokensUsed,
+			tokenBudget: usage.session.tokenBudget,
+			workspace: usage.workspace,
 		});
 	}
 }

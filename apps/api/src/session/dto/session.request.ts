@@ -59,3 +59,27 @@ const UpdateSessionStatusSchema = z.object({
 export class UpdateSessionStatusDto extends createZodDto(
 	UpdateSessionStatusSchema,
 ) {}
+
+const UpdateSettingsSchema = z
+	.object({
+		modelProvider: z.string().trim().min(1).max(50).optional(),
+		modelId: z.string().trim().min(1).max(100).optional(),
+		effort: z.enum(Effort).optional(),
+		tokenBudget: z
+			.number()
+			.int()
+			.positive()
+			.nullable()
+			.optional()
+			.describe('Cap for this session; null removes the cap'),
+	})
+	.refine(
+		(v) => (v.modelProvider === undefined) === (v.modelId === undefined),
+		{
+			message: 'Give modelProvider and modelId together',
+		},
+	)
+	.refine((v) => Object.values(v).some((x) => x !== undefined), {
+		message: 'Nothing to change',
+	});
+export class UpdateSettingsDto extends createZodDto(UpdateSettingsSchema) {}
