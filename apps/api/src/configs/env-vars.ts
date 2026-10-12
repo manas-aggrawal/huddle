@@ -24,6 +24,9 @@ export const {
 	// Provider credentials and endpoints (see src/llm/providers.ts)
 	GROQ_API_KEY,
 	OLLAMA_BASE_URL = 'http://localhost:11434',
+	// Web search for the agent: our SearXNG (docker compose up searxng), and how long to wait for it
+	SEARXNG_URL = 'http://localhost:8080',
+	SEARCH_TIMEOUT_MS,
 	// Token lifetimes (vercel/ms format, e.g. "30s", "15m", "1h"). Shorten the access one to test silent refresh.
 	ACCESS_TOKEN_TTL = '1h',
 	REFRESH_TOKEN_TTL = '8h',

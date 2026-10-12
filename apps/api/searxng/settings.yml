@@ -1,0 +1,26 @@
+# SearXNG for the agent's web_search tool (see src/research/search.service.ts).
+# Only the API is used: JSON output on, rate limiter off (it's local).
+use_default_settings: true
+
+general:
+  instance_name: huddle-search
+
+server:
+  # Local-only instance; set SEARXNG_SECRET in the environment for anything shared.
+  secret_key: "huddle-local-searxng-secret-change-me"
+  limiter: false
+  image_proxy: false
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json
+
+engines:
+  - name: duckduckgo
+    disabled: false
+  - name: bing
+    disabled: false
+  - name: wikipedia
+    disabled: false

@@ -98,6 +98,11 @@ export function sectionPrompt(input: {
 	/** Text already in this section (a person's edits, or a write that was cut off). */
 	existing: string;
 	humanText?: HumanPassage[];
+	/** What research found for this section. */
+	research?: {
+		notes: string;
+		sources: { n: number; title: string; url: string }[];
+	};
 }): string {
 	const { step } = input;
 	return join(
@@ -109,13 +114,17 @@ export function sectionPrompt(input: {
 			? `Earlier sections (shortened):\n${input.previous.map((p) => `## ${p.title}\n${p.excerpt}`).join('\n\n')}`
 			: '',
 		humanTextBlock(input.humanText ?? []),
+		input.research?.notes.trim()
+			? `Your research notes for this section:\n${input.research.notes.trim()}`
+			: '',
+		sourcesBlock(input.research?.sources ?? []),
 		input.existing.trim()
 			? `This section already contains the text below. Continue from where it stops; don't repeat it.\n"""\n${input.existing.trim()}\n"""`
 			: '',
 		`Write the body of the section "${step.title}"${step.description ? ` (${step.description})` : ''}.
 - 2 to 4 paragraphs of plain prose, separated by blank lines.
 - No heading, no title line, no markdown headers or bold.
-- Don't repeat what earlier sections already said.`,
+- Don't repeat what earlier sections already said.${input.research?.sources.length ? '\n- Back up facts with the sources above, citing them inline as [n].' : ''}`,
 	);
 }
 
@@ -229,4 +238,30 @@ ${PLAN_OPS_HELP}
 Reply with only JSON in this exact shape:
 {"reply":"...","planOps":[]}`,
 	);
+}
+
+export function researchPrompt(input: {
+	goal: string;
+	steps: PlanStepBrief[];
+	step: PlanStepBrief;
+	decisions: string[];
+	guidance: TeamInput[];
+}): string {
+	return join(
+		`Goal of the document: ${input.goal}`,
+		`Outline:\n${outlineBlock(input.steps, input.step.position)}`,
+		decisionsBlock(input.decisions),
+		guidanceBlock(input.guidance),
+		`You're about to write the section "${input.step.title}"${input.step.description ? ` (${input.step.description})` : ''}.
+First gather the facts it needs: use web_search (a few focused queries) and read_page on the most useful results. Prefer official and recent sources.
+When you have enough, reply with research notes only: short bullet points of concrete facts, each ending with the source number in brackets, like [2]. If a fact couldn't be verified, say so. Don't write the section itself.`,
+	);
+}
+
+export function sourcesBlock(
+	sources: { n: number; title: string; url: string }[],
+): string {
+	return sources.length
+		? `Sources (cite them inline as [n]):\n${sources.map((s) => `[${s.n}] ${s.title} — ${s.url}`).join('\n')}`
+		: '';
 }
