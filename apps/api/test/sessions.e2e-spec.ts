@@ -410,9 +410,7 @@ describe('Sessions API', () => {
 			await ctx
 				.as('maya')
 				.post('/sessions')
-				.send(
-					body({ modelProvider: 'groq', modelId: 'openai/gpt-oss-120b' }),
-				)
+				.send(body({ modelProvider: 'groq', modelId: 'openai/gpt-oss-120b' }))
 				.expect(201);
 			await ctx.http.get('/models').expect(401);
 		});
