@@ -9,6 +9,8 @@ export class AgentRun {
 	stopped = false;
 	/** Something changed while the loop was running; check again before exiting. */
 	wakeAgain = false;
+	/** What the loop is doing now, so an interrupt knows whether to cut it off. */
+	phase: string | null = null;
 	/** Resolves when the loop has exited. */
 	done: Promise<void> = Promise.resolve();
 

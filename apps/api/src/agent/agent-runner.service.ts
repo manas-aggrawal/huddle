@@ -28,12 +28,14 @@ import { AskResponderService } from './ask-responder.service';
 import { InvalidModelOutputError } from './json-output';
 import { PlannerService } from './planner.service';
 import { QueueProcessorService } from './queue-processor.service';
+import { ReplannerService } from './replanner.service';
 import { SectionWriterService } from './section-writer.service';
 
 /** What the loop should do next, decided from the session's saved state. */
 type NextAction =
 	| { kind: 'plan' }
 	| { kind: 'queue' }
+	| { kind: 'replan' }
 	| { kind: 'write'; stepId: string }
 	| { kind: 'finish' }
 	| { kind: 'idle' };
@@ -62,6 +64,7 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		private readonly writer: SectionWriterService,
 		private readonly queue: QueueProcessorService,
 		private readonly asks: AskResponderService,
+		private readonly replanner: ReplannerService,
 		@Inject(AGENT_OPTIONS) private readonly options: AgentOptions,
 	) {}
 
@@ -132,6 +135,11 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 			case EventType.HUMAN_MESSAGE:
 				if (payload.mode === MessageMode.ASK && payload.messageId) {
 					void this.asks.answer(payload.messageId);
+				} else if (
+					payload.mode === MessageMode.INTERRUPT &&
+					payload.messageId
+				) {
+					void this.interrupt(event.sessionId, payload.messageId);
 				} else {
 					// Picked up at the next section boundary (or now, if idle).
 					this.wake(event.sessionId);
@@ -155,6 +163,31 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		}
 	}
 
+	/**
+	 * Stops whatever the agent is writing right now and replans. Interrupts
+	 * don't cut off a replan in progress: they queue up and run after it.
+	 */
+	private async interrupt(sessionId: string, messageId: string) {
+		const session = await this.prisma.session.findUnique({
+			where: { id: sessionId },
+			select: { status: true },
+		});
+		if (session?.status !== SessionStatus.RUNNING) {
+			this.wake(sessionId); // Planning uses it as input; otherwise it waits.
+			return;
+		}
+		const run = this.runs.get(sessionId);
+		if (run && (run.phase === 'write' || run.phase === 'queue')) {
+			run.abortCurrent('interrupted');
+		}
+		await this.replanner
+			.acknowledge(messageId)
+			.catch((err) =>
+				this.logger.error(`Couldn't acknowledge interrupt ${messageId}`, err),
+			);
+		this.wake(sessionId);
+	}
+
 	private async drive(run: AgentRun): Promise<void> {
 		const { sessionId } = run;
 		try {
@@ -162,8 +195,10 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 				run.wakeAgain = false;
 				const next = await this.nextAction(sessionId);
 				if (next.kind === 'idle') break;
+				run.phase = next.kind;
 				try {
 					if (next.kind === 'plan') await this.planner.plan(run);
+					else if (next.kind === 'replan') await this.replanner.replanNext(run);
 					else if (next.kind === 'queue') await this.queue.process(run);
 					else if (next.kind === 'write')
 						await this.writeStep(run, next.stepId);
@@ -172,6 +207,8 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 					if (run.aborted) continue; // Cut off on purpose; re-read the state.
 					await this.reportFailure(sessionId, err);
 					break;
+				} finally {
+					run.phase = null;
 				}
 			}
 		} finally {
@@ -192,7 +229,8 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		if (!session || session.approvals.length > 0) return { kind: 'idle' };
 		if (session.status === SessionStatus.PLANNING) return { kind: 'plan' };
 		if (session.status !== SessionStatus.RUNNING) return { kind: 'idle' };
-		// Between sections, the team's input comes first.
+		// Interrupts first, then the team's queued input, then the next section.
+		if (await this.replanner.hasPending(sessionId)) return { kind: 'replan' };
 		if (await this.queue.hasQueued(sessionId)) return { kind: 'queue' };
 
 		const next = session.planSteps.find(
