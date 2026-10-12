@@ -30,6 +30,7 @@ import { InvalidModelOutputError } from './json-output';
 import { PlannerService } from './planner.service';
 import { QueueProcessorService } from './queue-processor.service';
 import { ReplannerService } from './replanner.service';
+import { RewriteService } from './rewrite.service';
 import { SectionWriterService } from './section-writer.service';
 
 /** What the loop should do next, decided from the session's saved state. */
@@ -67,6 +68,7 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		private readonly queue: QueueProcessorService,
 		private readonly asks: AskResponderService,
 		private readonly replanner: ReplannerService,
+		private readonly rewrites: RewriteService,
 		@Inject(AGENT_OPTIONS) private readonly options: AgentOptions,
 	) {}
 
@@ -147,8 +149,23 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 					this.wake(event.sessionId);
 				}
 				break;
+			case EventType.APPROVAL_RESOLVED: {
+				const p = event.payload as {
+					approvalId?: string;
+					kind?: string;
+					status?: string;
+				};
+				if (
+					p.kind === ApprovalKind.REWRITE_HUMAN_TEXT &&
+					p.status === ApprovalStatus.APPROVED &&
+					p.approvalId
+				) {
+					void this.rewrites.applyApproved(p.approvalId);
+				}
+				this.wake(event.sessionId);
+				break;
+			}
 			case EventType.SESSION_CREATED:
-			case EventType.APPROVAL_RESOLVED:
 				this.wake(event.sessionId);
 				break;
 			case EventType.STATUS_CHANGED:

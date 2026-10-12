@@ -95,6 +95,7 @@ export class SectionWriterService {
 		);
 		const existing =
 			sections.find((s) => s.sectionId === sectionId)?.text ?? '';
+		const humanText = await this.context.humanPassages(sessionId, steps);
 
 		const { result } = await this.llm.stream({
 			sessionId,
@@ -116,6 +117,7 @@ export class SectionWriterService {
 								: s.text,
 					})),
 				existing,
+				humanText,
 			}),
 			abortSignal: run.signal,
 		});

@@ -12,6 +12,7 @@ import { AskResponderService } from './ask-responder.service';
 import { PlannerService } from './planner.service';
 import { QueueProcessorService } from './queue-processor.service';
 import { ReplannerService } from './replanner.service';
+import { RewriteService } from './rewrite.service';
 import { SectionWriterService } from './section-writer.service';
 
 @Module({
@@ -32,6 +33,7 @@ import { SectionWriterService } from './section-writer.service';
 		QueueProcessorService,
 		AskResponderService,
 		ReplannerService,
+		RewriteService,
 	],
 	exports: [AgentRunner],
 })

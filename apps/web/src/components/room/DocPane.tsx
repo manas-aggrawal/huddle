@@ -25,10 +25,13 @@ export function DocPane({
 	me,
 	canEdit,
 	onViewing,
+	names,
 	className,
 }: {
 	sessionId: string;
 	me: Me;
+	/** userId → name, for "Written by …" on people's text. */
+	names: Map<string, string>;
 	/** From the session role; the server enforces it too. */
 	canEdit: boolean;
 	/** Called with the section id the cursor is in, for presence. */
@@ -62,6 +65,7 @@ export function DocPane({
 					me={me}
 					editable={editable}
 					onViewing={onViewing}
+					names={names}
 				/>
 			) : null}
 		</Pane>
@@ -73,20 +77,28 @@ function Editor({
 	me,
 	editable,
 	onViewing,
+	names: currentNames,
 }: {
 	connection: DocConnection;
 	me: Me;
 	editable: boolean;
 	onViewing: (sectionId: string | null) => void;
+	names: Map<string, string>;
 }) {
 	const lastViewing = useRef<string | null>(null);
+	// The editor is built once; the tooltip reads the latest names through this.
+	const names = useRef(currentNames);
+	names.current = currentNames;
 	const editor = useEditor({
 		editable,
 		extensions: [
 			// Collaboration brings its own undo history (per user, through Yjs).
 			StarterKit.configure({ undoRedo: false, heading: false }),
 			SectionHeading.configure({ levels: [2, 3] }),
-			HumanMark.configure({ userId: me.userId }),
+			HumanMark.configure({
+				userId: me.userId,
+				nameOf: (id) => names.current.get(id),
+			}),
 			Placeholder.configure({
 				placeholder: editable
 					? 'Start writing, or wait for the agent’s outline…'

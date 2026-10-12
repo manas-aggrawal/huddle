@@ -25,6 +25,26 @@ import {
 /** Text the agent writes carries no human mark, even when typed right after a person's text. */
 const AGENT_FORMAT = { [HUMAN_MARK]: null };
 
+/** The agent tried to change text a person wrote. It must ask (REWRITE_HUMAN_TEXT) first. */
+export class HumanTextProtectedError extends Error {
+	constructor(readonly ranges: HumanRange[]) {
+		super(
+			`That text was written by a person (${ranges.map((r) => `"${r.text.slice(0, 40)}"`).join(', ')}); ask before changing it`,
+		);
+		this.name = 'HumanTextProtectedError';
+	}
+}
+
+/** The text to replace isn't in the section (someone changed it), or spans paragraphs. */
+export class TextNotFoundError extends Error {
+	constructor(readonly before: string) {
+		super(
+			`Couldn't find "${before.slice(0, 60)}" in a single paragraph of the section`,
+		);
+		this.name = 'TextNotFoundError';
+	}
+}
+
 /**
  * The agent's pen: edits a session's document as one more peer, so everyone
  * connected sees its text appear live. Each call opens a server-side
@@ -106,6 +126,61 @@ export class AgentDocWriter {
 				fragment.insert(insertAt, [next]);
 				insertAt++;
 			}
+		});
+	}
+
+	/**
+	 * Replaces the first occurrence of `before` in the section with `after`.
+	 * Refuses (HumanTextProtectedError) when that overlaps text a person wrote,
+	 * unless `allowHuman` is set, which only an approved REWRITE_HUMAN_TEXT may
+	 * do; the new text is the agent's, so it carries no human mark.
+	 */
+	async replaceText(
+		sessionId: string,
+		sectionId: string,
+		before: string,
+		after: string,
+		{ allowHuman = false } = {},
+	) {
+		await this.write(sessionId, (doc) => {
+			const bounds = this.require(doc, sectionId);
+			const full = sectionText(doc, bounds);
+			const from = before ? full.indexOf(before) : -1;
+			if (from === -1) throw new TextNotFoundError(before);
+			const to = from + before.length;
+			const overlapping = humanRanges(doc, bounds).filter(
+				(r) => r.from < to && r.to > from,
+			);
+			if (overlapping.length && !allowHuman) {
+				throw new HumanTextProtectedError(overlapping);
+			}
+
+			// Find the paragraph (and the text node in it) holding [from, to).
+			const fragment = fragmentOf(doc);
+			let offset = 0;
+			for (let i = bounds.heading + 1; i < bounds.end; i++) {
+				if (i > bounds.heading + 1) offset += 2; // "\n\n" between paragraphs
+				const block = fragment.get(i);
+				const texts =
+					block instanceof Y.XmlElement
+						? (block
+								.toArray()
+								.filter((c) => c instanceof Y.XmlText) as Y.XmlText[])
+						: block instanceof Y.XmlText
+							? [block]
+							: [];
+				for (const text of texts) {
+					const start = offset;
+					const end = offset + text.length;
+					if (from >= start && to <= end) {
+						text.delete(from - start, before.length);
+						text.insert(from - start, after, AGENT_FORMAT);
+						return;
+					}
+					offset = end;
+				}
+			}
+			throw new TextNotFoundError(before);
 		});
 	}
 
