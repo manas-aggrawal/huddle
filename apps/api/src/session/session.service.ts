@@ -211,8 +211,16 @@ export class SessionService {
 					},
 				});
 			}
+			// The creator has seen everything so far (no catch-up card for them).
+			const fresh = await tx.session.findUniqueOrThrow({
+				where: { id: created.id },
+			});
+			await tx.sessionMember.updateMany({
+				where: { sessionId: created.id, userId },
+				data: { lastSeenSeq: fresh.lastEventSeq },
+			});
 			// Re-read so lastEventSeq/updatedAt reflect the event just written.
-			return tx.session.findUniqueOrThrow({ where: { id: created.id } });
+			return fresh;
 		});
 
 		return toSessionDto(session);

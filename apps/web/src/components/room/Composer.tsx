@@ -9,6 +9,7 @@ import { useMutation } from '@tanstack/react-query';
 import {
 	type KeyboardEvent,
 	useEffect,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -125,6 +126,17 @@ export function Composer({
 		onTyping(on);
 	};
 	useEffect(() => () => clearTimeout(typingTimer.current), []);
+	// After picking a mention, put the caret right after it before the next keystroke.
+	const caretAfterMention = useRef<number | null>(null);
+	useLayoutEffect(() => {
+		if (caretAfterMention.current === null) return;
+		box.current?.setSelectionRange(
+			caretAfterMention.current,
+			caretAfterMention.current,
+		);
+		box.current?.focus();
+		caretAfterMention.current = null;
+	}, [text]);
 
 	const candidates = useMemo(() => {
 		if (!mention) return [];
@@ -171,11 +183,7 @@ export function Composer({
 		const next = `${text.slice(0, mention.start)}@${name} ${text.slice(caret)}`;
 		setText(next);
 		setMention(null);
-		requestAnimationFrame(() => {
-			const at = mention.start + name.length + 2;
-			box.current?.setSelectionRange(at, at);
-			box.current?.focus();
-		});
+		caretAfterMention.current = mention.start + name.length + 2;
 	};
 
 	const submit = () => {

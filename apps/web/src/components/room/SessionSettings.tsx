@@ -36,7 +36,7 @@ function Meter({
 			className="flex min-w-0 flex-col gap-0.5"
 			title={`${used.toLocaleString()} ${of ? `of ${of.toLocaleString()} ` : ''}tokens`}
 		>
-			<span className="text-[11px] text-muted">
+			<span className="whitespace-nowrap text-[11px] text-muted">
 				{label}: {compact(used)}
 				{of ? ` / ${compact(of)}` : ''}
 			</span>
@@ -86,7 +86,7 @@ export function SessionSettings({
 				<Popover
 					label="Model and budget"
 					trigger={
-						<span className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2">
+						<span className="block max-w-[11rem] truncate whitespace-nowrap rounded-md border border-line px-2 py-1 text-xs text-muted hover:bg-surface-2 sm:max-w-none">
 							{summary}
 						</span>
 					}
@@ -94,7 +94,9 @@ export function SessionSettings({
 					{(close) => <SettingsForm session={session} onDone={close} />}
 				</Popover>
 			) : (
-				<span className="text-xs text-muted">{summary}</span>
+				<span className="max-w-[11rem] truncate whitespace-nowrap text-xs text-muted sm:max-w-none">
+					{summary}
+				</span>
 			)}
 		</div>
 	);

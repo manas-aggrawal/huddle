@@ -42,7 +42,7 @@ export function SessionRoomPage() {
 	const session = useSessionDetail(sessionId);
 	// Join the live room only once we know we're a member.
 	const live = useSessionSocket(session.data ? sessionId : undefined);
-	useRefetchOnEvents(sessionId, live.events);
+	useRefetchOnEvents(sessionId, live.events, session.data?.lastEventSeq);
 	const names = useMemo(
 		() =>
 			new Map(
