@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ApprovalModule } from '@src/approval/approval.module';
 import { CollabModule } from '@src/collab/collab.module';
+import { ConflictModule } from '@src/conflict/conflict.module';
 import { LlmModule } from '@src/llm/llm.module';
 import { RealtimeModule } from '@src/realtime/realtime.module';
 import { TimelineModule } from '@src/timeline/timeline.module';
@@ -22,6 +23,7 @@ import { SectionWriterService } from './section-writer.service';
 		CollabModule,
 		RealtimeModule,
 		ApprovalModule,
+		ConflictModule,
 	],
 	providers: [
 		{ provide: AGENT_OPTIONS, useFactory: defaultAgentOptions },

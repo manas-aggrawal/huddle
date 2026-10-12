@@ -148,6 +148,8 @@ export function queuePrompt(input: {
 	steps: PlanStepBrief[];
 	decisions: string[];
 	humanText?: HumanPassage[];
+	/** Earlier input the agent is following, to check new input against. */
+	following?: (TeamInput & { messageId: string })[];
 	messages: (TeamInput & {
 		messageId: string;
 		mode: string;
@@ -160,6 +162,9 @@ export function queuePrompt(input: {
 		`Current plan:\n${numberedPlan(input.steps)}`,
 		decisionsBlock(input.decisions),
 		humanTextBlock(input.humanText ?? []),
+		input.following?.length
+			? `Earlier input you're already following:\n${input.following.map((m) => `- id ${m.messageId} | ${m.author} (${m.role.toLowerCase()}): ${m.content}`).join('\n')}`
+			: '',
 		`New input from the team, oldest first:\n${input.messages
 			.map(
 				(m) =>
@@ -172,11 +177,12 @@ export function queuePrompt(input: {
 - "decline": don't follow it; say why politely.
 To change text already written in a finished section, add "rewrite": {"position":N,"before":"exact text to replace","after":"new text"}. Changing a human-authored passage asks that person's team for approval first.
 Reply to each person by first name, briefly, like a helpful teammate ("Got it, Leo — I'll add UX notes to each profile.").
+If two people's inputs contradict each other (new vs. new, or new vs. earlier input), don't pick a side: list them in "conflicts" with both message ids, a one-line summary, and the number of the step it affects (if any). The Owner decides; you keep working on everything else.
 
 ${PLAN_OPS_HELP}
 
 Reply with only JSON in this exact shape:
-{"decisions":[{"messageId":"...","decision":"apply","reply":"...","planOps":[],"rewrite":null}]}`,
+{"conflicts":[],"decisions":[{"messageId":"...","decision":"apply","reply":"...","planOps":[],"rewrite":null}]}`,
 	);
 }
 

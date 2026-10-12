@@ -9,6 +9,7 @@ import {
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AgentDocWriter } from '@src/collab/agent-doc-writer.service';
+import { ConflictService } from '@src/conflict/conflict.service';
 import { LlmService } from '@src/llm/llm.service';
 import { PrismaService } from '@src/prisma/prisma.service';
 import { TimelineService } from '@src/timeline/timeline.service';
@@ -27,6 +28,18 @@ import { AGENT_SYSTEM, queuePrompt } from './prompts';
 import { RewriteService } from './rewrite.service';
 
 export const QueueDecisionSchema = z.object({
+	/** Inputs that contradict each other: the Owner decides, the agent doesn't. */
+	conflicts: z
+		.array(
+			z.object({
+				messageIds: z.array(z.string()).min(2).max(10),
+				summary: z.string().trim().min(1).max(500),
+				/** The step it affects, by number; that step waits until it's settled. */
+				position: z.number().int().min(1).nullish(),
+			}),
+		)
+		.max(5)
+		.nullish(),
 	decisions: z.array(
 		z.object({
 			messageId: z.string(),
@@ -73,6 +86,7 @@ export class QueueProcessorService {
 		private readonly agentState: AgentStateService,
 		private readonly context: AgentContextService,
 		private readonly rewrites: RewriteService,
+		private readonly conflicts: ConflictService,
 	) {}
 
 	hasQueued(sessionId: string): Promise<boolean> {
@@ -104,6 +118,7 @@ export class QueueProcessorService {
 		]);
 		const sectionTitle = new Map(sections.map((s) => [s.sectionId, s.title]));
 		const humanText = await this.context.humanPassages(sessionId, steps);
+		const following = await this.context.followedInput(sessionId);
 
 		const result = await generateJson(
 			this.llm,
@@ -116,6 +131,7 @@ export class QueueProcessorService {
 					steps,
 					decisions,
 					humanText,
+					following,
 					messages: queued.map((m) => {
 						const anchor = (m.anchor ?? {}) as {
 							quote?: string;
@@ -153,7 +169,26 @@ export class QueueProcessorService {
 		}
 
 		const byId = new Map(result.decisions.map((d) => [d.messageId, d]));
+		const queuedIds = new Set(queued.map((m) => m.messageId));
 		await this.timeline.transaction(async (tx) => {
+			// Conflicts first: their step is blocked before anything else changes.
+			const inConflict = new Map<string, string[]>();
+			for (const c of result.conflicts ?? []) {
+				if (!c.messageIds.some((id) => queuedIds.has(id))) continue;
+				const raised = await this.conflicts.raise(tx, sessionId, {
+					summary: c.summary,
+					messageIds: c.messageIds,
+					planStepId: c.position ? steps[c.position - 1]?.id : null,
+				});
+				if (!raised) continue;
+				for (const id of c.messageIds) inConflict.set(id, c.messageIds);
+			}
+			for (const input of queued) {
+				const others = inConflict.get(input.messageId);
+				if (!others) continue;
+				await this.handleConflicted(tx, sessionId, input, others);
+			}
+
 			for (const input of queued) {
 				// Still queued? (Another pass may have handled it meanwhile.)
 				const fresh = await tx.message.findUnique({
@@ -161,6 +196,7 @@ export class QueueProcessorService {
 					select: { status: true },
 				});
 				if (fresh?.status !== MessageStatus.QUEUED) continue;
+				if (inConflict.has(input.messageId)) continue;
 				const decision = byId.get(input.messageId);
 				await this.handle(
 					tx,
@@ -170,6 +206,40 @@ export class QueueProcessorService {
 					outcomes.get(input.messageId),
 				);
 			}
+		});
+	}
+
+	/** Inputs caught in a conflict wait for the Owner; tell their authors so. */
+	private async handleConflicted(
+		tx: Prisma.TransactionClient,
+		sessionId: string,
+		input: QueuedInput,
+		conflictIds: string[],
+	) {
+		const firstName = input.author.split(' ')[0];
+		const otherAuthors = await tx.message.findMany({
+			where: { id: { in: conflictIds.filter((id) => id !== input.messageId) } },
+			include: { author: { select: { firstname: true } } },
+		});
+		const names =
+			[...new Set(otherAuthors.map((m) => m.author.firstname))].join(' and ') ||
+			'someone else';
+		const reply = `${firstName}, that contradicts what ${names} asked for, so I’ve flagged it for the Owner to decide.`;
+		await tx.message.updateMany({
+			where: { id: input.messageId, status: MessageStatus.QUEUED },
+			data: { status: MessageStatus.ACKNOWLEDGED, response: reply },
+		});
+		await this.timeline.append(tx, sessionId, {
+			type: EventType.AGENT_ACK,
+			actorType: ActorType.AGENT,
+			payload: {
+				messageId: input.messageId,
+				author: { id: input.authorId, name: input.author },
+				mode: input.mode,
+				status: MessageStatus.ACKNOWLEDGED,
+				decision: 'conflict',
+				reply,
+			},
 		});
 	}
 

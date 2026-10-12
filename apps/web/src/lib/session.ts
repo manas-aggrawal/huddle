@@ -42,6 +42,8 @@ const REFETCH_ON = new Set<string>([
 	EventType.APPROVAL_RESOLVED,
 	EventType.HANDOFF,
 	EventType.DECISION_PINNED,
+	EventType.CONFLICT_RAISED,
+	EventType.CONFLICT_RESOLVED,
 	EventType.DECISION_UNPINNED,
 	EventType.MODEL_CHANGED,
 ]);

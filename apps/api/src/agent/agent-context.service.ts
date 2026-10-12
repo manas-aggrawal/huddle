@@ -119,6 +119,33 @@ export class AgentContextService {
 		}));
 	}
 
+	/** Input the agent is already following, with ids, so new input can be checked against it. */
+	async followedInput(sessionId: string): Promise<QueuedInput[]> {
+		const messages = await this.prisma.message.findMany({
+			where: {
+				sessionId,
+				status: MessageStatus.APPLIED,
+				mode: {
+					in: [MessageMode.SUGGEST, MessageMode.INTERRUPT, MessageMode.COMMENT],
+				},
+			},
+			orderBy: { createdAt: 'desc' },
+			take: 20,
+			include: { author: { select: { firstname: true, lastname: true } } },
+		});
+		const roles = await this.roles(sessionId);
+		return messages.reverse().map((m) => ({
+			messageId: m.id,
+			authorId: m.authorId,
+			author: `${m.author.firstname} ${m.author.lastname}`.trim(),
+			role: roles.get(m.authorId) ?? 'former member',
+			mode: m.mode as MessageMode,
+			content: m.content,
+			anchor: m.anchor,
+			planStepId: m.planStepId,
+		}));
+	}
+
 	async roles(sessionId: string): Promise<Map<string, string>> {
 		const members = await this.prisma.sessionMember.findMany({
 			where: { sessionId },
