@@ -4,6 +4,8 @@ import {
 	ApprovalKind,
 	ApprovalStatus,
 	EventType,
+	MessageMode,
+	MessageStatus,
 	SessionStatus,
 	StepStatus,
 } from '@huddle/shared';
@@ -22,13 +24,16 @@ import { TimelineService } from '@src/timeline/timeline.service';
 import { AGENT_OPTIONS, type AgentOptions } from './agent.options';
 import { AgentRun } from './agent-run';
 import { AgentStateService } from './agent-state.service';
+import { AskResponderService } from './ask-responder.service';
 import { InvalidModelOutputError } from './json-output';
 import { PlannerService } from './planner.service';
+import { QueueProcessorService } from './queue-processor.service';
 import { SectionWriterService } from './section-writer.service';
 
 /** What the loop should do next, decided from the session's saved state. */
 type NextAction =
 	| { kind: 'plan' }
+	| { kind: 'queue' }
 	| { kind: 'write'; stepId: string }
 	| { kind: 'finish' }
 	| { kind: 'idle' };
@@ -55,6 +60,8 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		private readonly agentState: AgentStateService,
 		private readonly planner: PlannerService,
 		private readonly writer: SectionWriterService,
+		private readonly queue: QueueProcessorService,
+		private readonly asks: AskResponderService,
 		@Inject(AGENT_OPTIONS) private readonly options: AgentOptions,
 	) {}
 
@@ -69,6 +76,13 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 			select: { id: true },
 		});
 		for (const s of active) this.wake(s.id);
+		// Questions asked while the process was down still get answers.
+		const unanswered = await this.prisma.message.findMany({
+			where: { mode: MessageMode.ASK, status: MessageStatus.QUEUED },
+			distinct: ['sessionId'],
+			select: { sessionId: true },
+		});
+		for (const m of unanswered) void this.asks.answerPending(m.sessionId);
 	}
 
 	async onModuleDestroy() {
@@ -109,8 +123,20 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 	}
 
 	private onEvent(event: TimelineEvent) {
-		const payload = event.payload as { to?: string };
+		const payload = event.payload as {
+			to?: string;
+			mode?: string;
+			messageId?: string;
+		};
 		switch (event.type) {
+			case EventType.HUMAN_MESSAGE:
+				if (payload.mode === MessageMode.ASK && payload.messageId) {
+					void this.asks.answer(payload.messageId);
+				} else {
+					// Picked up at the next section boundary (or now, if idle).
+					this.wake(event.sessionId);
+				}
+				break;
 			case EventType.SESSION_CREATED:
 			case EventType.APPROVAL_RESOLVED:
 				this.wake(event.sessionId);
@@ -138,6 +164,7 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 				if (next.kind === 'idle') break;
 				try {
 					if (next.kind === 'plan') await this.planner.plan(run);
+					else if (next.kind === 'queue') await this.queue.process(run);
 					else if (next.kind === 'write')
 						await this.writeStep(run, next.stepId);
 					else await this.requestFinal(sessionId);
@@ -165,6 +192,8 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		if (!session || session.approvals.length > 0) return { kind: 'idle' };
 		if (session.status === SessionStatus.PLANNING) return { kind: 'plan' };
 		if (session.status !== SessionStatus.RUNNING) return { kind: 'idle' };
+		// Between sections, the team's input comes first.
+		if (await this.queue.hasQueued(sessionId)) return { kind: 'queue' };
 
 		const next = session.planSteps.find(
 			(s) =>

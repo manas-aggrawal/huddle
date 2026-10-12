@@ -12,8 +12,11 @@ type StreamPart = Awaited<
 
 /** One model call's scripted response. Each call to the model consumes the next step. */
 export interface ScriptedStep {
-	/** Text the model "writes". Streamed word by word in streaming calls. */
-	text?: string;
+	/**
+	 * Text the model "writes". Streamed word by word in streaming calls. A
+	 * function gets the call's prompt as text, for replies that must echo ids.
+	 */
+	text?: string | ((prompt: string) => string);
 	/** Tool calls the model makes; `input` is serialized to JSON for you. */
 	toolCalls?: { toolName: string; input: unknown }[];
 	/** Token usage to report. Defaults: 10 input, one output token per word. */
@@ -42,7 +45,7 @@ export function scriptedModel(steps: ScriptedStep[]): ScriptedModel {
 	const calls: CallOptions[] = [];
 	let next = 0;
 
-	function take(options: CallOptions): ScriptedStep {
+	function take(options: CallOptions): ScriptedStep & { text?: string } {
 		calls.push(options);
 		const step = steps[next++];
 		if (!step) {
@@ -51,10 +54,16 @@ export function scriptedModel(steps: ScriptedStep[]): ScriptedModel {
 			);
 		}
 		if (step.error) throw step.error;
-		return step;
+		const text =
+			typeof step.text === 'function'
+				? step.text(JSON.stringify(options.prompt))
+				: step.text;
+		return { ...step, text };
 	}
 
-	function usageOf(step: ScriptedStep): GenerateResult['usage'] {
+	function usageOf(
+		step: ScriptedStep & { text?: string },
+	): GenerateResult['usage'] {
 		const words = step.text ? step.text.split(/\s+/).filter(Boolean).length : 0;
 		const input = step.usage?.input ?? 10;
 		const output = step.usage?.output ?? words;
