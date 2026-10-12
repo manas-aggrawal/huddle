@@ -48,23 +48,28 @@ const REFETCH_ON = new Set<string>([
 	EventType.MODEL_CHANGED,
 ]);
 
-/** Keeps the session detail fresh: refetches when a relevant event arrives live. */
+/**
+ * Keeps the session detail fresh: refetches when a relevant event arrives
+ * that the loaded detail doesn't include yet (its lastEventSeq says how far
+ * it got). Covers live events and replayed ones newer than the fetch.
+ */
 export function useRefetchOnEvents(
 	sessionId: string | undefined,
 	events: TimelineEventDto[],
+	detailSeq: number | undefined,
 ) {
 	const queryClient = useQueryClient();
-	const seen = useRef(0);
+	const handled = useRef(0);
 	useEffect(() => {
-		if (!sessionId) return;
-		const fresh = events.filter((e) => e.seq > seen.current);
-		if (events.length) seen.current = events[events.length - 1].seq;
-		// The first batch is the replay the detail already reflects.
-		if (fresh.length === events.length) return;
+		if (!sessionId || detailSeq === undefined) return;
+		const since = Math.max(handled.current, detailSeq);
+		const fresh = events.filter((e) => e.seq > since);
+		if (fresh.length === 0) return;
+		handled.current = fresh[fresh.length - 1].seq;
 		if (fresh.some((e) => REFETCH_ON.has(e.type))) {
 			void queryClient.invalidateQueries({ queryKey: sessionKey(sessionId) });
 		}
-	}, [sessionId, events, queryClient]);
+	}, [sessionId, events, detailSeq, queryClient]);
 }
 
 export const memberName = (m: { firstname: string; lastname: string }) =>

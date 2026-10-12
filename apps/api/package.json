@@ -13,6 +13,7 @@
 		"container:db:init": "docker exec -it huddle-api npm run db:init",
 		"db:init": "npm run migrate && npm run seed",
 		"seed": "ts-node prisma/scripts/seed.ts",
+		"seed:demo": "ts-node prisma/scripts/seed-demo.ts",
 		"migrate": "npx prisma migrate deploy",
 		"migrate:new": "npx prisma migrate dev",
 		"build": "nest build",
