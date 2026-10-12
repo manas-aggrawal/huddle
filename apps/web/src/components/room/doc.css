@@ -66,3 +66,14 @@
 	white-space: nowrap;
 	user-select: none;
 }
+
+/* Text people wrote (the human mark): a faint tint, and a rule beside its paragraph. */
+.huddle-doc span[data-human] {
+	background: color-mix(in srgb, var(--accent) 6%, transparent);
+	border-radius: 2px;
+}
+.huddle-doc p:has(> span[data-human]) {
+	border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+	margin-left: -10px;
+	padding-left: 8px;
+}

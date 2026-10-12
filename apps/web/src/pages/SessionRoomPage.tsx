@@ -110,6 +110,7 @@ export function SessionRoomPage() {
 				{user && (
 					<DocPane
 						sessionId={s.id}
+						names={names}
 						me={{ userId: user.id, name: fullName(user) }}
 						canEdit={can(me, 'editDoc')}
 						onViewing={(viewing) => live.updatePresence({ viewing })}
@@ -125,12 +126,14 @@ export function SessionRoomPage() {
 							approvalId: string;
 							kind: string;
 							title: string;
+							details?: unknown;
 						};
 						return (
 							<ApprovalCard
 								sessionId={s.id}
 								approvalId={p.approvalId}
 								kind={p.kind}
+								details={p.details}
 								pending={s.pendingApprovals.some((a) => a.id === p.approvalId)}
 								outcome={outcomes.get(p.approvalId)}
 								canApprove={can(me, 'approve')}

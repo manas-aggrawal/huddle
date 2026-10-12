@@ -27,6 +27,27 @@ const HINT: Partial<Record<ApprovalKind, string>> = {
 		'The session reached its token cap. Approve to give it more.',
 };
 
+/** Before → after, for a proposed rewrite of someone's text. */
+function RewriteDiff({ details }: { details: unknown }) {
+	const d = (details ?? {}) as {
+		before?: string;
+		after?: string;
+		authors?: string[];
+	};
+	if (!d.before) return null;
+	return (
+		<div className="mt-2 flex flex-col gap-1 text-sm">
+			{d.authors?.length ? (
+				<p className="text-xs text-muted">Written by {d.authors.join(', ')}</p>
+			) : null}
+			<p className="rounded bg-danger-soft px-2 py-1 text-danger line-through decoration-1">
+				{d.before}
+			</p>
+			<p className="rounded bg-ok-soft px-2 py-1 text-ok">{d.after}</p>
+		</div>
+	);
+}
+
 /** Approve / Reject (with a note), for people who can approve. */
 function ApprovalActions({
 	sessionId,
@@ -154,6 +175,9 @@ export function ApprovalBar({
 										'The agent is waiting for your answer.')
 									: 'Waiting for the Owner or an approver.'}
 							</p>
+							{a.kind === ApprovalKind.REWRITE_HUMAN_TEXT && (
+								<RewriteDiff details={a.details} />
+							)}
 						</div>
 					</div>
 					{canApprove && (
@@ -194,6 +218,7 @@ export function ApprovalCard({
 	sessionId,
 	approvalId,
 	kind,
+	details,
 	pending,
 	outcome,
 	canApprove,
@@ -202,6 +227,7 @@ export function ApprovalCard({
 	sessionId: string;
 	approvalId: string;
 	kind: string;
+	details?: unknown;
 	/** Still pending on the server (cancelled ones aren't). */
 	pending: boolean;
 	outcome?: { status: string; by: string | null; note: string | null };
@@ -230,6 +256,9 @@ export function ApprovalCard({
 	}
 	return (
 		<div className="mt-2 rounded-lg border border-line bg-surface-2 p-2.5">
+			{kind === ApprovalKind.REWRITE_HUMAN_TEXT && (
+				<RewriteDiff details={details} />
+			)}
 			<p className="text-xs text-muted">
 				{canApprove
 					? (HINT[kind as ApprovalKind] ?? 'Waiting for your answer.')

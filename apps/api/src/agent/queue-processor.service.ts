@@ -24,6 +24,7 @@ import {
 	summarizeDiff,
 } from './plan-ops';
 import { AGENT_SYSTEM, queuePrompt } from './prompts';
+import { RewriteService } from './rewrite.service';
 
 export const QueueDecisionSchema = z.object({
 	decisions: z.array(
@@ -32,6 +33,14 @@ export const QueueDecisionSchema = z.object({
 			decision: z.enum(['apply', 'plan_change', 'decline']),
 			reply: z.string().trim().min(1).max(1000),
 			planOps: z.array(PlanOpSchema).max(20).nullish(),
+			/** Change text already in a written section. */
+			rewrite: z
+				.object({
+					position: z.number().int().min(1),
+					before: z.string().min(1).max(4000),
+					after: z.string().max(8000),
+				})
+				.nullish(),
 		}),
 	),
 });
@@ -63,6 +72,7 @@ export class QueueProcessorService {
 		private readonly doc: AgentDocWriter,
 		private readonly agentState: AgentStateService,
 		private readonly context: AgentContextService,
+		private readonly rewrites: RewriteService,
 	) {}
 
 	hasQueued(sessionId: string): Promise<boolean> {
@@ -93,6 +103,7 @@ export class QueueProcessorService {
 			this.doc.listSections(sessionId),
 		]);
 		const sectionTitle = new Map(sections.map((s) => [s.sectionId, s.title]));
+		const humanText = await this.context.humanPassages(sessionId, steps);
 
 		const result = await generateJson(
 			this.llm,
@@ -104,6 +115,7 @@ export class QueueProcessorService {
 					goal: session.goal,
 					steps,
 					decisions,
+					humanText,
 					messages: queued.map((m) => {
 						const anchor = (m.anchor ?? {}) as {
 							quote?: string;
@@ -124,6 +136,22 @@ export class QueueProcessorService {
 		);
 		if (run.aborted) return;
 
+		// Rewrites touch the doc, not the database, so they run first; one that
+		// hits a person's text becomes an approval instead.
+		const outcomes = new Map<string, string>();
+		for (const d of result.decisions) {
+			if (!d.rewrite || d.decision === 'decline') continue;
+			const step = steps[d.rewrite.position - 1];
+			if (!step) continue;
+			const outcome = await this.rewrites.propose(
+				sessionId,
+				step,
+				d.rewrite.before,
+				d.rewrite.after,
+			);
+			outcomes.set(d.messageId, outcome);
+		}
+
 		const byId = new Map(result.decisions.map((d) => [d.messageId, d]));
 		await this.timeline.transaction(async (tx) => {
 			for (const input of queued) {
@@ -134,7 +162,13 @@ export class QueueProcessorService {
 				});
 				if (fresh?.status !== MessageStatus.QUEUED) continue;
 				const decision = byId.get(input.messageId);
-				await this.handle(tx, sessionId, input, decision);
+				await this.handle(
+					tx,
+					sessionId,
+					input,
+					decision,
+					outcomes.get(input.messageId),
+				);
 			}
 		});
 	}
@@ -144,13 +178,20 @@ export class QueueProcessorService {
 		sessionId: string,
 		input: QueuedInput,
 		decision: QueueDecision | undefined,
+		rewrite?: string,
 	) {
 		const firstName = input.author.split(' ')[0];
 		// The model skipped it: acknowledge rather than leave it hanging.
-		const status = decision
+		let status = decision
 			? STATUS_FOR[decision.decision]
 			: MessageStatus.ACKNOWLEDGED;
-		const reply = decision?.reply ?? `Noted, ${firstName}.`;
+		let reply = decision?.reply ?? `Noted, ${firstName}.`;
+		if (rewrite === 'asked') {
+			status = MessageStatus.ACKNOWLEDGED;
+			reply = `${reply} That changes text a person wrote, so I’ve asked for approval first.`;
+		} else if (rewrite === 'not_found') {
+			reply = `${reply} (I couldn’t find the exact text to change.)`;
+		}
 
 		if (decision?.decision === 'plan_change' && decision.planOps?.length) {
 			const diff = await applyPlanOps(tx, sessionId, decision.planOps);

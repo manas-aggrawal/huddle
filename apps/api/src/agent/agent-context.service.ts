@@ -1,5 +1,7 @@
 import { MessageMode, MessageStatus } from '@huddle/shared';
 import { Injectable } from '@nestjs/common';
+import { PlanStep } from '@prisma/client';
+import { AgentDocWriter } from '@src/collab/agent-doc-writer.service';
 import { PrismaService } from '@src/prisma/prisma.service';
 import type { TeamInput } from './prompts';
 
@@ -14,7 +16,56 @@ export interface QueuedInput extends TeamInput {
 /** Reads what the agent needs to know about a session for its prompts. */
 @Injectable()
 export class AgentContextService {
-	constructor(private readonly prisma: PrismaService) {}
+	constructor(
+		private readonly prisma: PrismaService,
+		private readonly doc: AgentDocWriter,
+	) {}
+
+	/**
+	 * Text people wrote in each section, by step number, so prompts can say
+	 * "don't change these" and rewrites know what needs asking.
+	 */
+	async humanPassages(
+		sessionId: string,
+		steps: PlanStep[],
+	): Promise<
+		{ position: number; title: string; author: string; text: string }[]
+	> {
+		const users = new Map<string, string>();
+		const out: {
+			position: number;
+			title: string;
+			author: string;
+			text: string;
+		}[] = [];
+		for (const [i, step] of steps.entries()) {
+			if (!step.sectionId) continue;
+			if (!(await this.doc.hasSection(sessionId, step.sectionId))) continue;
+			for (const r of await this.doc.getHumanOwnedRanges(
+				sessionId,
+				step.sectionId,
+			)) {
+				if (!r.text.trim()) continue;
+				if (!users.has(r.userId)) {
+					const u = await this.prisma.user.findUnique({
+						where: { id: r.userId },
+						select: { firstname: true, lastname: true },
+					});
+					users.set(
+						r.userId,
+						u ? `${u.firstname} ${u.lastname}`.trim() : 'Someone',
+					);
+				}
+				out.push({
+					position: i + 1,
+					title: step.title,
+					author: users.get(r.userId) as string,
+					text: r.text,
+				});
+			}
+		}
+		return out;
+	}
 
 	/** Pinned decisions still in force, oldest first. */
 	async activeDecisions(sessionId: string): Promise<string[]> {

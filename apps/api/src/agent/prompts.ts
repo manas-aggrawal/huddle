@@ -67,6 +67,19 @@ Reply with only JSON in this exact shape:
 	);
 }
 
+export interface HumanPassage {
+	position: number;
+	title: string;
+	author: string;
+	text: string;
+}
+
+export function humanTextBlock(passages: HumanPassage[]): string {
+	return passages.length
+		? `Human-authored passages (do not change these; a person wrote them):\n${bullets(passages.map((p) => `in ${p.position}. "${p.title}", by ${p.author}: "${p.text.slice(0, 300)}"`))}`
+		: '';
+}
+
 export function guidanceBlock(guidance: TeamInput[]): string {
 	return guidance.length
 		? `Guidance from the team you agreed to follow:\n${bullets(guidance.map((g) => `${g.author}: ${g.content}`))}`
@@ -84,6 +97,7 @@ export function sectionPrompt(input: {
 	previous: { title: string; excerpt: string }[];
 	/** Text already in this section (a person's edits, or a write that was cut off). */
 	existing: string;
+	humanText?: HumanPassage[];
 }): string {
 	const { step } = input;
 	return join(
@@ -94,6 +108,7 @@ export function sectionPrompt(input: {
 		input.previous.length
 			? `Earlier sections (shortened):\n${input.previous.map((p) => `## ${p.title}\n${p.excerpt}`).join('\n\n')}`
 			: '',
+		humanTextBlock(input.humanText ?? []),
 		input.existing.trim()
 			? `This section already contains the text below. Continue from where it stops; don't repeat it.\n"""\n${input.existing.trim()}\n"""`
 			: '',
@@ -132,6 +147,7 @@ export function queuePrompt(input: {
 	goal: string;
 	steps: PlanStepBrief[];
 	decisions: string[];
+	humanText?: HumanPassage[];
 	messages: (TeamInput & {
 		messageId: string;
 		mode: string;
@@ -143,6 +159,7 @@ export function queuePrompt(input: {
 		`Goal of the document: ${input.goal}`,
 		`Current plan:\n${numberedPlan(input.steps)}`,
 		decisionsBlock(input.decisions),
+		humanTextBlock(input.humanText ?? []),
 		`New input from the team, oldest first:\n${input.messages
 			.map(
 				(m) =>
@@ -153,12 +170,13 @@ export function queuePrompt(input: {
 - "apply": follow it in the sections you still have to write.
 - "plan_change": change the plan (give planOps).
 - "decline": don't follow it; say why politely.
+To change text already written in a finished section, add "rewrite": {"position":N,"before":"exact text to replace","after":"new text"}. Changing a human-authored passage asks that person's team for approval first.
 Reply to each person by first name, briefly, like a helpful teammate ("Got it, Leo — I'll add UX notes to each profile.").
 
 ${PLAN_OPS_HELP}
 
 Reply with only JSON in this exact shape:
-{"decisions":[{"messageId":"...","decision":"apply","reply":"...","planOps":[]}]}`,
+{"decisions":[{"messageId":"...","decision":"apply","reply":"...","planOps":[],"rewrite":null}]}`,
 	);
 }
 

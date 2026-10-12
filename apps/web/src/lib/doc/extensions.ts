@@ -71,18 +71,30 @@ export const SectionHeading = Heading.extend({
  * Marks text people type with their user id. The agent's text has no mark, which is
  * how it knows not to rewrite human text without asking.
  */
-export const HumanMark = Mark.create<{ userId: string | null }>({
+export const HumanMark = Mark.create<{
+	userId: string | null;
+	/** Name for the "Written by …" tooltip. Read at render time. */
+	nameOf: (userId: string) => string | undefined;
+}>({
 	name: HUMAN_MARK,
 	inclusive: false,
 	addOptions() {
-		return { userId: null };
+		return { userId: null, nameOf: () => undefined };
 	},
 	addAttributes() {
 		return {
 			userId: {
 				default: null,
 				parseHTML: (el) => el.getAttribute('data-human'),
-				renderHTML: (attrs) => ({ 'data-human': attrs.userId }),
+				renderHTML: (attrs) => {
+					const name = attrs.userId
+						? this.options.nameOf(attrs.userId)
+						: undefined;
+					return {
+						'data-human': attrs.userId,
+						title: `Written by ${name ?? 'a teammate'}. The agent asks before changing it.`,
+					};
+				},
 			},
 		};
 	},
