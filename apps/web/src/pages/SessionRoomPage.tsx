@@ -16,6 +16,7 @@ import { PinnedDecisions } from '../components/room/PinnedDecisions';
 import { PlanPane } from '../components/room/PlanPane';
 import { RoomHeader } from '../components/room/RoomHeader';
 import { TimelinePane } from '../components/room/TimelinePane';
+import { ToolCallLinks } from '../components/room/ToolCallLinks';
 import { useSessionSocket } from '../hooks/useSessionSocket';
 import { ApiError } from '../lib/api';
 import { fullName, useAuth } from '../lib/auth';
@@ -139,6 +140,9 @@ export function SessionRoomPage() {
 					events={live.events}
 					names={names}
 					renderExtra={(e) => {
+						if (e.type === EventType.TOOL_CALL) {
+							return <ToolCallLinks payload={e.payload} />;
+						}
 						if (e.type === EventType.CONFLICT_RAISED) {
 							const c = e.payload as {
 								conflictId: string;

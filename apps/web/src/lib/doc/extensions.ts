@@ -3,10 +3,13 @@ import {
 	SECTION_HEADING_LEVEL,
 	SECTION_ID_ATTR,
 	SECTION_ID_HTML_ATTR,
+	SOURCES_SECTION_ID,
 } from '@huddle/shared';
-import { Mark } from '@tiptap/core';
+import { Extension, Mark } from '@tiptap/core';
 import Heading from '@tiptap/extension-heading';
+import type { Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { ySyncPluginKey } from '@tiptap/y-tiptap';
 
 // The document conventions from @huddle/shared/doc.ts, as Tiptap extensions.
@@ -142,6 +145,127 @@ export const HumanMark = Mark.create<{
 					return out.steps.length
 						? out.setMeta(key, true).setMeta('addToHistory', false)
 						: null;
+				},
+			}),
+		];
+	},
+});
+
+const CITATION = /\[(\d{1,3})\]/g;
+
+/** Highlights each [n] citation, outside the Sources list itself. */
+function citationDecorations(doc: PMNode): DecorationSet {
+	const decorations: Decoration[] = [];
+	let inSources = false;
+	doc.forEach((block, offset) => {
+		if (
+			block.type.name === 'heading' &&
+			block.attrs.level === SECTION_HEADING_LEVEL
+		) {
+			inSources = block.attrs[SECTION_ID_ATTR] === SOURCES_SECTION_ID;
+			return;
+		}
+		if (inSources) return;
+		block.descendants((node, pos) => {
+			if (!node.isText || !node.text) return;
+			for (const m of node.text.matchAll(CITATION)) {
+				const from = offset + 1 + pos + (m.index ?? 0);
+				decorations.push(
+					Decoration.inline(from, from + m[0].length, {
+						class: 'huddle-cite',
+						'data-cite': m[1],
+						title: `Source ${m[1]}: click to see it in Sources`,
+					}),
+				);
+			}
+		});
+	});
+	return DecorationSet.create(doc, decorations);
+}
+
+/**
+ * Makes the agent's [n] citations clickable: a click scrolls to that line of
+ * the Sources list at the end of the doc and highlights it for a moment.
+ * (The highlight is a decoration: ProseMirror undoes direct DOM changes.)
+ */
+export const CitationLinks = Extension.create({
+	name: 'citationLinks',
+	addProseMirrorPlugins() {
+		type CiteState = { cites: DecorationSet; target: number | null };
+		const key = new PluginKey<CiteState>('citationLinks');
+		return [
+			new Plugin<CiteState>({
+				key,
+				state: {
+					init: (_, state): CiteState => ({
+						cites: citationDecorations(state.doc),
+						target: null,
+					}),
+					apply: (tr, old) => {
+						const meta = tr.getMeta(key) as
+							| { target: number | null }
+							| undefined;
+						return {
+							cites: tr.docChanged ? citationDecorations(tr.doc) : old.cites,
+							target:
+								meta !== undefined
+									? meta.target
+									: old.target === null
+										? null
+										: tr.mapping.map(old.target),
+						};
+					},
+				},
+				props: {
+					decorations(state) {
+						const s = key.getState(state);
+						if (!s) return null;
+						if (s.target === null) return s.cites;
+						const node = state.doc.nodeAt(s.target);
+						if (!node) return s.cites;
+						return s.cites.add(state.doc, [
+							Decoration.node(s.target, s.target + node.nodeSize, {
+								class: 'huddle-cite-target',
+							}),
+						]);
+					},
+					handleClick(view, _pos, event) {
+						const cite = (event.target as HTMLElement).closest('[data-cite]');
+						if (!cite) return false;
+						const n = cite.getAttribute('data-cite');
+						// Find the Sources line "[n] …" in the document itself.
+						let inSources = false;
+						let target: number | null = null;
+						let heading: number | null = null;
+						view.state.doc.forEach((block, offset) => {
+							if (
+								block.type.name === 'heading' &&
+								block.attrs.level === SECTION_HEADING_LEVEL
+							) {
+								inSources = block.attrs[SECTION_ID_ATTR] === SOURCES_SECTION_ID;
+								if (inSources) heading = offset;
+								return;
+							}
+							if (
+								inSources &&
+								target === null &&
+								block.textContent.startsWith(`[${n}]`)
+							) {
+								target = offset;
+							}
+						});
+						const goal = target ?? heading;
+						if (goal === null) return false;
+						const dom = view.nodeDOM(goal);
+						if (dom instanceof HTMLElement)
+							dom.scrollIntoView({ behavior: 'smooth', block: 'center' });
+						view.dispatch(view.state.tr.setMeta(key, { target: goal }));
+						setTimeout(() => {
+							if (!view.isDestroyed)
+								view.dispatch(view.state.tr.setMeta(key, { target: null }));
+						}, 1600);
+						return true;
+					},
 				},
 			}),
 		];

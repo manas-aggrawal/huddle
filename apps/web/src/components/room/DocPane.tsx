@@ -5,7 +5,11 @@ import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef } from 'react';
-import { HumanMark, SectionHeading } from '../../lib/doc/extensions';
+import {
+	CitationLinks,
+	HumanMark,
+	SectionHeading,
+} from '../../lib/doc/extensions';
 import {
 	type DocConnection,
 	useDocProvider,
@@ -99,6 +103,7 @@ function Editor({
 				userId: me.userId,
 				nameOf: (id) => names.current.get(id),
 			}),
+			CitationLinks,
 			Placeholder.configure({
 				placeholder: editable
 					? 'Start writing, or wait for the agent’s outline…'
