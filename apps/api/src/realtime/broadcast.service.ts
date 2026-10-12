@@ -1,4 +1,4 @@
-import { ServerToClientEvents, sessionRoom } from '@huddle/shared';
+import { ServerToClientEvents, sessionRoom, userRoom } from '@huddle/shared';
 import { Injectable } from '@nestjs/common';
 import type { Server } from 'socket.io';
 
@@ -21,5 +21,13 @@ export class BroadcastService {
 		...args: Parameters<ServerToClientEvents[E]>
 	) {
 		this.server?.to(sessionRoom(sessionId)).emit(event, ...args);
+	}
+
+	toUser<E extends keyof ServerToClientEvents>(
+		userId: string,
+		event: E,
+		...args: Parameters<ServerToClientEvents[E]>
+	) {
+		this.server?.to(userRoom(userId)).emit(event, ...args);
 	}
 }

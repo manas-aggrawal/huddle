@@ -18,6 +18,7 @@ import {
 } from '@nestjs/common';
 import { Approval, Prisma, SessionMember } from '@prisma/client';
 import { DecisionService } from '@src/decision/decision.service';
+import { NotificationService } from '@src/realtime/notification.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import { ApprovalDecision, ResolveApprovalDto } from './dto/approval.dto';
 
@@ -48,6 +49,7 @@ export class ApprovalService {
 	constructor(
 		private readonly timeline: TimelineService,
 		private readonly decisions: DecisionService,
+		private readonly notifications: NotificationService,
 	) {}
 
 	/**
@@ -89,15 +91,16 @@ export class ApprovalService {
 			},
 			select: { userId: true },
 		});
-		await tx.notification.createMany({
-			data: approvers.map((a) => ({
+		await this.notifications.create(
+			tx,
+			approvers.map((a) => ({
 				userId: a.userId,
 				sessionId,
 				type: NotificationType.APPROVAL_REQUESTED,
-				title: `Approval needed: ${req.title}`.slice(0, 200),
+				title: `Approval needed: ${req.title}`,
 				refId: approval.id,
 			})),
-		});
+		);
 
 		const payload: ApprovalPayload = {
 			approvalId: approval.id,

@@ -4,6 +4,7 @@ import {
 	ApprovalKind,
 	ApprovalStatus,
 	BLOCKING_APPROVAL_KINDS,
+	can,
 	Effort,
 	EventType,
 	MessageMode,
@@ -228,16 +229,55 @@ export class SessionService {
 				...(query.status ? { session: { status: query.status } } : {}),
 			},
 			include: {
-				session: { include: { _count: { select: { members: true } } } },
+				session: {
+					include: {
+						_count: { select: { members: true } },
+						members: {
+							include: {
+								user: {
+									select: { username: true, firstname: true, lastname: true },
+								},
+							},
+						},
+						approvals: {
+							where: { status: ApprovalStatus.PENDING },
+							select: { id: true },
+						},
+					},
+				},
 			},
 			// sessionId breaks ties so the order is stable between requests.
 			orderBy: [{ session: { updatedAt: 'desc' } }, { sessionId: 'asc' }],
 		});
-		return memberships.map((m) => ({
-			...toSessionDto(m.session),
-			myRole: m.role as SessionRole,
-			memberCount: m.session._count.members,
-		}));
+		const unread = await this.prisma.notification.groupBy({
+			by: ['sessionId'],
+			where: { userId, readAt: null },
+			_count: { _all: true },
+		});
+		const unreadBy = new Map(unread.map((u) => [u.sessionId, u._count._all]));
+		return memberships.map((m) => {
+			const members = [...m.session.members].sort(byRoleThenJoined);
+			const owner = members.find((x) => x.role === SessionRole.OWNER);
+			const name = (x: (typeof members)[number]) =>
+				`${x.user.firstname} ${x.user.lastname}`.trim();
+			const unreadCount = unreadBy.get(m.sessionId) ?? 0;
+			const canApprove = can(
+				{ role: m.role as SessionRole, canApprove: m.canApprove },
+				'approve',
+			);
+			const { members: _m, approvals, ...session } = m.session;
+			return {
+				...toSessionDto(session),
+				myRole: m.role as SessionRole,
+				memberCount: m.session._count.members,
+				owner: owner ? { id: owner.userId, name: name(owner) } : null,
+				memberPreview: members
+					.slice(0, 5)
+					.map((x) => ({ userId: x.userId, name: name(x) })),
+				waitingOnMe: unreadCount > 0 || (canApprove && approvals.length > 0),
+				unreadCount,
+			};
+		});
 	}
 
 	/** Everything the session room needs on first load. Access is checked by the guard. */

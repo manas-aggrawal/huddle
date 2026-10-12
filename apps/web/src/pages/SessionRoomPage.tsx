@@ -1,7 +1,7 @@
 import { type AgentState, can, EventType, SessionStatus } from '@huddle/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import {
 	ApprovalBar,
 	ApprovalCard,
@@ -70,6 +70,19 @@ export function SessionRoomPage() {
 		retry: false,
 	});
 	useMarkSeen(sessionId, live.events.at(-1)?.seq, !catchUp.isPending);
+	// Opened from the inbox: jump to the event the notification is about.
+	const [params, setParams] = useSearchParams();
+	const focus = params.get('focus');
+	useEffect(() => {
+		if (!focus) return;
+		const ids = ['approvalId', 'messageId', 'conflictId', 'handoffId'];
+		const hit = live.events.find((e) =>
+			ids.some((k) => (e.payload as Record<string, unknown>)[k] === focus),
+		);
+		if (!hit) return;
+		setJumpTo((j) => ({ seq: hit.seq, n: (j?.n ?? 0) + 1 }));
+		setParams({}, { replace: true });
+	}, [focus, live.events, setParams]);
 
 	if (session.isPending) {
 		return (

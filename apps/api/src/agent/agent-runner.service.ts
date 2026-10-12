@@ -24,6 +24,7 @@ import { TimelineEvent } from '@prisma/client';
 import { ApprovalService } from '@src/approval/approval.service';
 import { BudgetExceededError, PoolExhaustedError } from '@src/llm/errors';
 import { PrismaService } from '@src/prisma/prisma.service';
+import { NotificationService } from '@src/realtime/notification.service';
 import { SessionService } from '@src/session/session.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import { POOL_EXHAUSTED } from '@src/workspace/workspace.constants';
@@ -75,6 +76,7 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		private readonly replanner: ReplannerService,
 		private readonly rewrites: RewriteService,
 		private readonly sessions: SessionService,
+		private readonly notifications: NotificationService,
 		@Inject(AGENT_OPTIONS) private readonly options: AgentOptions,
 	) {}
 
@@ -395,8 +397,8 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 			where: { workspaceId: err.workspaceId, role: WorkspaceRole.ADMIN },
 			select: { userId: true },
 		});
-		await this.prisma.notification.createMany({
-			data: admins.map((a) => ({
+		await this.notifications.createNow(
+			admins.map((a) => ({
 				userId: a.userId,
 				sessionId,
 				type: NotificationType.POOL_EXHAUSTED,
@@ -407,7 +409,7 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 					),
 				refId: err.workspaceId,
 			})),
-		});
+		);
 	}
 
 	/** Tells the room why the agent stopped. It picks up again when the Owner resumes. */

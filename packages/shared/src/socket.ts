@@ -24,6 +24,8 @@ export const SocketEvent = {
 	AGENT_STATE: 'session:agent-state',
 	/** Server → client: token usage after each model call, for the budget meter. */
 	USAGE: 'session:usage',
+	/** Server → client, to one user (every tab): something new in their inbox. */
+	NOTIFICATION_NEW: 'notification:new',
 } as const;
 
 /** Most events a single join replays. If `hasMore`, join again with the last seq you got. */
@@ -114,6 +116,15 @@ export interface SessionUsage {
 	workspace: { tokensUsedThisPeriod: number; tokenAllowance: number };
 }
 
+export interface NotificationNew {
+	id: string;
+	sessionId: string;
+	type: string;
+	title: string;
+	refId: string | null;
+	createdAt: string;
+}
+
 export interface ClientToServerEvents {
 	'session:join': (
 		req: SessionJoinRequest,
@@ -133,7 +144,11 @@ export interface ServerToClientEvents {
 	'session:removed': (msg: SessionRemoved) => void;
 	'session:agent-state': (state: AgentStateChanged) => void;
 	'session:usage': (usage: SessionUsage) => void;
+	'notification:new': (n: NotificationNew) => void;
 }
 
 /** Socket.IO room name for a session. */
 export const sessionRoom = (sessionId: string) => `session:${sessionId}`;
+
+/** Socket.IO room for one user's sockets (all their tabs). */
+export const userRoom = (userId: string) => `user:${userId}`;

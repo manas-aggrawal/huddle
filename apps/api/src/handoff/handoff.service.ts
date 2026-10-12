@@ -12,6 +12,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Handoff, SessionMember } from '@prisma/client';
 import { LlmService } from '@src/llm/llm.service';
 import { PrismaService } from '@src/prisma/prisma.service';
+import { NotificationService } from '@src/realtime/notification.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 
 const fullName = (u: { firstname: string; lastname: string }) =>
@@ -28,6 +29,7 @@ export class HandoffService {
 		private readonly prisma: PrismaService,
 		private readonly timeline: TimelineService,
 		private readonly llm: LlmService,
+		private readonly notifications: NotificationService,
 	) {}
 
 	/** Drafts the briefing for `toUserId`. Nothing changes yet. */
@@ -144,15 +146,15 @@ export class HandoffService {
 					briefing: dto.briefing,
 				},
 			});
-			await tx.notification.create({
-				data: {
+			await this.notifications.create(tx, [
+				{
 					userId: dto.toUserId,
 					sessionId,
 					type: NotificationType.HANDOFF_RECEIVED,
-					title: `${from.name} handed you the session`.slice(0, 200),
+					title: `${from.name} handed you the session`,
 					refId: handoff.id,
 				},
-			});
+			]);
 			return handoff;
 		});
 	}

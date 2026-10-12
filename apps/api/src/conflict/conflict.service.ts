@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { Conflict, Prisma, SessionMember } from '@prisma/client';
 import { DecisionService } from '@src/decision/decision.service';
+import { NotificationService } from '@src/realtime/notification.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 
 export interface RaiseConflict {
@@ -31,6 +32,7 @@ export class ConflictService {
 	constructor(
 		private readonly timeline: TimelineService,
 		private readonly decisions: DecisionService,
+		private readonly notifications: NotificationService,
 	) {}
 
 	/** Records a conflict inside the caller's timeline transaction. */
@@ -96,15 +98,16 @@ export class ConflictService {
 			...sides.map((s) => s.author.id),
 			...(owner ? [owner.userId] : []),
 		]);
-		await tx.notification.createMany({
-			data: [...notify].map((userId) => ({
+		await this.notifications.create(
+			tx,
+			[...notify].map((userId) => ({
 				userId,
 				sessionId,
 				type: NotificationType.CONFLICT_RAISED,
-				title: `Conflict: ${c.summary}`.slice(0, 200),
+				title: `Conflict: ${c.summary}`,
 				refId: conflict.id,
 			})),
-		});
+		);
 		return conflict;
 	}
 
