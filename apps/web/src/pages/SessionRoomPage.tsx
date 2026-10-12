@@ -1,11 +1,13 @@
 import { type AgentState, can, EventType, SessionStatus } from '@huddle/shared';
-import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
 	ApprovalBar,
 	ApprovalCard,
 	approvalOutcomes,
 } from '../components/room/ApprovalBar';
+import { CatchUpCard } from '../components/room/CatchUpCard';
 import { Composer } from '../components/room/Composer';
 import {
 	ConflictCard,
@@ -18,7 +20,7 @@ import { RoomHeader } from '../components/room/RoomHeader';
 import { TimelinePane } from '../components/room/TimelinePane';
 import { ToolCallLinks } from '../components/room/ToolCallLinks';
 import { useSessionSocket } from '../hooks/useSessionSocket';
-import { ApiError } from '../lib/api';
+import { ApiError, api, unwrap } from '../lib/api';
 import { fullName, useAuth } from '../lib/auth';
 import {
 	asRole,
@@ -51,6 +53,22 @@ export function SessionRoomPage() {
 		[live.events],
 	);
 	const [draft, setDraft] = useState<{ text: string; n: number } | null>(null);
+	const [jumpTo, setJumpTo] = useState<{ seq: number; n: number } | null>(null);
+	// Read once per visit, before this visit marks anything as seen.
+	const catchUp = useQuery({
+		queryKey: ['catch-up', sessionId],
+		queryFn: () =>
+			unwrap(
+				api.GET('/sessions/{id}/catch-up', {
+					params: { path: { id: sessionId ?? '' } },
+				}),
+			),
+		enabled: Boolean(session.data),
+		staleTime: Number.POSITIVE_INFINITY,
+		gcTime: 0,
+		retry: false,
+	});
+	useMarkSeen(sessionId, live.events.at(-1)?.seq, !catchUp.isPending);
 
 	if (session.isPending) {
 		return (
@@ -139,6 +157,18 @@ export function SessionRoomPage() {
 				<TimelinePane
 					events={live.events}
 					names={names}
+					jumpTo={jumpTo}
+					header={
+						catchUp.data && (
+							<CatchUpCard
+								sessionId={s.id}
+								catchUp={catchUp.data}
+								onJump={(seq) =>
+									setJumpTo((j) => ({ seq, n: (j?.n ?? 0) + 1 }))
+								}
+							/>
+						)
+					}
 					renderExtra={(e) => {
 						if (e.type === EventType.TOOL_CALL) {
 							return <ToolCallLinks payload={e.payload} />;
@@ -209,4 +239,26 @@ export function SessionRoomPage() {
 			</div>
 		</main>
 	);
+}
+
+/**
+ * Viewing the room counts as seeing the timeline: the newest seq is saved a
+ * couple of seconds after it arrives, while the tab is visible.
+ */
+function useMarkSeen(
+	sessionId: string | undefined,
+	lastSeq: number | undefined,
+	enabled: boolean,
+) {
+	useEffect(() => {
+		if (!sessionId || !lastSeq || !enabled) return;
+		const t = setTimeout(() => {
+			if (document.visibilityState !== 'visible') return;
+			void api.POST('/sessions/{id}/seen', {
+				params: { path: { id: sessionId } },
+				body: { seq: lastSeq },
+			});
+		}, 2000);
+		return () => clearTimeout(t);
+	}, [sessionId, lastSeq, enabled]);
 }

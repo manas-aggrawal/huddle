@@ -5,6 +5,7 @@ import { AgentModule } from './agent/agent.module';
 import { ApprovalModule } from './approval/approval.module';
 import { AuthModule } from './auth/auth.module';
 import { AccessTokenGuard } from './auth/guards/access-token.guard';
+import { CatchUpModule } from './catch-up/catch-up.module';
 import { CollabModule } from './collab/collab.module';
 import { THROTTLE_LIMIT, THROTTLE_TTL } from './configs/env-vars';
 import { ConflictModule } from './conflict/conflict.module';
@@ -51,6 +52,7 @@ import { UserModule } from './user/user.module';
 		DecisionModule,
 		ConflictModule,
 		PlanModule,
+		CatchUpModule,
 		AgentModule,
 	],
 	providers: [

@@ -36,6 +36,8 @@ export function TimelinePane({
 	names,
 	footer,
 	renderExtra,
+	header,
+	jumpTo,
 	className,
 }: {
 	events: TimelineEventDto[];
@@ -45,9 +47,14 @@ export function TimelinePane({
 	footer?: ReactNode;
 	/** Extra content under an event (e.g. an approval card). */
 	renderExtra?: (event: TimelineEventDto) => ReactNode;
+	/** Shown above the list (the catch-up card). */
+	header?: ReactNode;
+	/** Scroll to this event and flash it; `n` changes for every request. */
+	jumpTo?: { seq: number; n: number } | null;
 	className?: string;
 }) {
 	const statuses = useMemo(() => messageStatuses(events), [events]);
+	const [flash, setFlash] = useState<number | null>(null);
 	const scroller = useRef<HTMLDivElement>(null);
 	const atBottom = useRef(true);
 	const [showJump, setShowJump] = useState(false);
@@ -69,6 +76,17 @@ export function TimelinePane({
 		else setShowJump(true);
 	}, [events.length, virtualizer]);
 
+	useEffect(() => {
+		if (!jumpTo) return;
+		const index = events.findIndex((e) => e.seq === jumpTo.seq);
+		if (index === -1) return;
+		atBottom.current = false;
+		virtualizer.scrollToIndex(index, { align: 'center' });
+		setFlash(jumpTo.seq);
+		const t = setTimeout(() => setFlash(null), 1600);
+		return () => clearTimeout(t);
+	}, [jumpTo, events, virtualizer]);
+
 	// Refresh "5 minutes ago" labels.
 	useEffect(() => {
 		const t = setInterval(() => tick((n) => n + 1), 30_000);
@@ -84,6 +102,7 @@ export function TimelinePane({
 
 	return (
 		<Pane title="Timeline" className={className} bodyClassName="flex flex-col">
+			{header}
 			<div className="relative min-h-0 flex-1">
 				<div
 					ref={scroller}
@@ -118,7 +137,10 @@ export function TimelinePane({
 										key={item.key}
 										data-index={item.index}
 										ref={virtualizer.measureElement}
-										className="absolute top-0 left-0 w-full px-3 py-2"
+										className={cx(
+											'absolute top-0 left-0 w-full px-3 py-2 transition-colors',
+											flash === e.seq && 'bg-accent-soft',
+										)}
 										style={{ transform: `translateY(${item.start}px)` }}
 									>
 										<div className="flex gap-2.5">
