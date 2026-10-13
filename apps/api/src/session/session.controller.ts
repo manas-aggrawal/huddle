@@ -1,7 +1,9 @@
 import {
 	Body,
 	Controller,
+	Delete,
 	Get,
+	HttpCode,
 	Param,
 	Patch,
 	Post,
@@ -11,6 +13,7 @@ import {
 import {
 	ApiBearerAuth,
 	ApiConflictResponse,
+	ApiNoContentResponse,
 	ApiOperation,
 	ApiTags,
 } from '@nestjs/swagger';
@@ -71,6 +74,19 @@ export class SessionController {
 		@CurrentMembership() membership: SessionMember,
 	): Promise<SessionDetailDto> {
 		return this.sessions.getDetail(membership);
+	}
+
+	/** Deletes the session and everything in it, for every member. Owner only. */
+	@Delete(':id')
+	@HttpCode(204)
+	@RequireSessionAction('deleteSession')
+	@ApiOperation({ summary: 'Delete a session' })
+	@ApiNoContentResponse({ description: 'Deleted' })
+	async remove(
+		@Param('id') _id: string,
+		@CurrentMembership() membership: SessionMember,
+	): Promise<void> {
+		await this.sessions.delete(membership);
 	}
 
 	/** Pause, resume or end the session. Owner only. */

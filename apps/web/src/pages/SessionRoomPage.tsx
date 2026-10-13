@@ -104,18 +104,22 @@ export function SessionRoomPage() {
 		return (
 			<main className="mx-auto max-w-xl px-4 py-16 text-center">
 				<h1 className="text-xl font-semibold">
-					{live.removed
-						? "You're no longer in this session"
-						: notFound
-							? 'Session not found'
-							: "Couldn't load this session"}
+					{live.removed === 'deleted'
+						? 'This session was deleted'
+						: live.removed
+							? "You're no longer in this session"
+							: notFound
+								? 'Session not found'
+								: "Couldn't load this session"}
 				</h1>
 				<p className="mt-2 text-sm text-muted">
-					{live.removed
-						? 'The Owner removed you. Ask them for a new invite if this was a mistake.'
-						: notFound
-							? "It doesn't exist, or you're not a member. Ask the Owner for an invite link."
-							: session.error?.message}
+					{live.removed === 'deleted'
+						? 'The Owner deleted it, along with its document and history.'
+						: live.removed
+							? 'The Owner removed you. Ask them for a new invite if this was a mistake.'
+							: notFound
+								? "It doesn't exist, or you're not a member. Ask the Owner for an invite link."
+								: session.error?.message}
 				</p>
 				<Link
 					to="/"

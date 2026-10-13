@@ -32,7 +32,8 @@ export type SessionAction =
 	| 'changeRoles'
 	| 'handOff'
 	| 'changeSettings'
-	| 'pauseOrEnd';
+	| 'pauseOrEnd'
+	| 'deleteSession';
 
 const VIEWER_ACTIONS: SessionAction[] = ['watch', 'ask', 'comment'];
 const EDITOR_ACTIONS: SessionAction[] = [
@@ -52,6 +53,7 @@ const OWNER_ACTIONS: SessionAction[] = [
 	'handOff',
 	'changeSettings',
 	'pauseOrEnd',
+	'deleteSession',
 ];
 
 const PERMISSIONS: Record<SessionRole, ReadonlySet<SessionAction>> = {

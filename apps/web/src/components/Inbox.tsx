@@ -9,7 +9,7 @@ import { BellIcon, cx, Popover } from './ui';
 
 export const inboxKey = ['notifications'] as const;
 
-/** Keeps the inbox and the sessions list fresh when something new arrives for me. */
+/** Keeps the inbox and the sessions list fresh when something arrives for me or a session goes away. */
 export function useInboxLive() {
 	const queryClient = useQueryClient();
 	useEffect(() => {
@@ -19,8 +19,11 @@ export function useInboxLive() {
 			void queryClient.invalidateQueries({ queryKey: ['sessions'] });
 		};
 		socket.on(SocketEvent.NOTIFICATION_NEW, onNew);
+		// Removed from a session, or it was deleted: it leaves Home and the inbox.
+		socket.on(SocketEvent.SESSION_REMOVED, onNew);
 		return () => {
 			socket.off(SocketEvent.NOTIFICATION_NEW, onNew);
+			socket.off(SocketEvent.SESSION_REMOVED, onNew);
 		};
 	}, [queryClient]);
 }

@@ -4,6 +4,7 @@ import {
 	type PresenceMember,
 	type PresenceUpdateRequest,
 	type SessionJoinAck,
+	type SessionRemoved,
 	type SessionUsage,
 	SocketEvent,
 	type TimelineEventDto,
@@ -24,8 +25,8 @@ export interface SessionSocketState {
 	presence: PresenceMember[];
 	/** Set when the server refused the join (e.g. 404 for a non-member). */
 	error: { status: number; message: string } | null;
-	/** The Owner removed you from the session. */
-	removed: boolean;
+	/** You can't be here any more: the Owner removed you, or deleted the session. */
+	removed: SessionRemoved['reason'] | null;
 	/** What the agent is doing, from live updates. Null until the first one arrives. */
 	agent: { state: AgentState; stepId: string | null } | null;
 	/** Token use after the latest model call. Null until one happens. */
@@ -60,7 +61,7 @@ export function useSessionSocket(
 	const [events, setEvents] = useState<TimelineEventDto[]>([]);
 	const [presence, setPresence] = useState<PresenceMember[]>([]);
 	const [error, setError] = useState<SessionSocketState['error']>(null);
-	const [removed, setRemoved] = useState(false);
+	const [removed, setRemoved] = useState<SessionRemoved['reason'] | null>(null);
 	const [agent, setAgent] = useState<SessionSocketState['agent']>(null);
 	const [usage, setUsage] = useState<SessionUsage | null>(null);
 	const lastSeq = useRef(0);
@@ -73,7 +74,7 @@ export function useSessionSocket(
 		setEvents([]);
 		setPresence([]);
 		setError(null);
-		setRemoved(false);
+		setRemoved(null);
 		setAgent(null);
 		setUsage(null);
 		setStatus(socket.connected ? 'live' : 'connecting');
@@ -144,9 +145,9 @@ export function useSessionSocket(
 		const onUsage = (u: SessionUsage) => {
 			if (u.sessionId === sessionId) setUsage(u);
 		};
-		const onRemoved = (p: { sessionId: string }) => {
+		const onRemoved = (p: SessionRemoved) => {
 			if (p.sessionId !== sessionId) return;
-			setRemoved(true);
+			setRemoved(p.reason);
 			setPresence([]);
 		};
 
