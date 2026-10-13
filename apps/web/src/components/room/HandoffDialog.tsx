@@ -20,7 +20,12 @@ export function HandoffDialog({
 }) {
 	const queryClient = useQueryClient();
 	const editors = session.members.filter((m) => m.role === SessionRole.EDITOR);
-	const [to, setTo] = useState(editors[0]?.userId ?? '');
+	const [picked, setPicked] = useState('');
+	// The dialog is mounted before anyone may be an Editor, so fall back to the
+	// first Editor now rather than whoever was first when it mounted.
+	const to = editors.some((m) => m.userId === picked)
+		? picked
+		: (editors[0]?.userId ?? '');
 	const [briefing, setBriefing] = useState('');
 	const [note, setNote] = useState('');
 	const path = { params: { path: { id: session.id } } };
@@ -73,7 +78,7 @@ export function HandoffDialog({
 						<select
 							value={to}
 							onChange={(e) => {
-								setTo(e.target.value);
+								setPicked(e.target.value);
 								setBriefing('');
 							}}
 							className="h-10 rounded-lg border border-line bg-surface px-3 text-sm font-normal outline-none focus:border-focus"
