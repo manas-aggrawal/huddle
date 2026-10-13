@@ -10,6 +10,8 @@
 		"node": ">=22.13.0"
 	},
 	"scripts": {
+		"setup": "node scripts/setup-env.mjs && npm install && npm run services:up && npm run db:migrate",
+		"start": "npm run services:up && npm run dev",
 		"dev": "npm run build -w @huddle/shared && concurrently -n shared,api,web -c gray,blue,green \"npm:dev:shared\" \"npm:dev:api\" \"npm:dev:web\"",
 		"dev:shared": "npm run dev -w @huddle/shared",
 		"dev:api": "npm run start:dev -w @huddle/api",
@@ -20,7 +22,14 @@
 		"format": "biome format --write .",
 		"check": "biome check --write .",
 		"test:e2e": "npm run test:e2e -w @huddle/api",
-		"gen:api": "npm run gen:api -w @huddle/web"
+		"gen:api": "npm run gen:api -w @huddle/web",
+		"services:up": "docker compose -f apps/api/docker-compose.yaml up -d --wait db searxng",
+		"services:down": "docker compose -f apps/api/docker-compose.yaml stop db searxng",
+		"services:logs": "docker compose -f apps/api/docker-compose.yaml logs -f db searxng",
+		"db:migrate": "npm run migrate -w @huddle/api",
+		"db:studio": "npm exec -w @huddle/api -- prisma studio",
+		"seed:demo": "npm run seed:demo -w @huddle/api",
+		"seed:demo:reset": "npm run seed:demo -w @huddle/api -- --reset"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.5",
