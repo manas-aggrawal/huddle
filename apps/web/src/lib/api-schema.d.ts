@@ -210,7 +210,8 @@ export interface paths {
         get: operations["SessionController_get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a session */
+        delete: operations["SessionController_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1712,6 +1713,40 @@ export interface operations {
                 };
             };
             /** @description Your role in this session can't watch */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session not found, or you are not a member */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Your role in this session can't deleteSession */
             403: {
                 headers: {
                     [name: string]: unknown;

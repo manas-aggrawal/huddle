@@ -10,7 +10,7 @@ export const SocketEvent = {
 	SESSION_JOIN: 'session:join',
 	/** Client → server, with an ack: stop receiving a session's events. */
 	SESSION_LEAVE: 'session:leave',
-	/** Server → client: you were removed from the session; you've left its room. */
+	/** Server → client: you were removed from the session, or the Owner deleted it; you've left its room. */
 	SESSION_REMOVED: 'session:removed',
 	/** Server → client: a new timeline event, sent only after it was saved. */
 	TIMELINE_EVENT: 'timeline:event',
@@ -98,7 +98,7 @@ export interface PresenceState {
 
 export interface SessionRemoved {
 	sessionId: string;
-	reason: 'removed';
+	reason: 'removed' | 'deleted';
 }
 
 export interface AgentStateChanged {

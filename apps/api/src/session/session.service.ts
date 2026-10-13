@@ -11,6 +11,7 @@ import {
 	MessageStatus,
 	SessionRole,
 	SessionStatus,
+	SocketEvent,
 	StepStatus,
 	WorkspaceRole,
 } from '@huddle/shared';
@@ -33,6 +34,7 @@ import {
 } from '@src/configs/env-vars';
 import { isAllowedModel } from '@src/models/models.registry';
 import { PrismaService } from '@src/prisma/prisma.service';
+import { BroadcastService } from '@src/realtime/broadcast.service';
 import { TimelineService } from '@src/timeline/timeline.service';
 import {
 	CreateSessionDto,
@@ -147,10 +149,41 @@ function toSessionDto(s: Session): SessionDto {
 
 @Injectable()
 export class SessionService {
+	/** Run before a session is deleted, e.g. to stop its agent. */
+	private readonly beforeDelete: ((sessionId: string) => Promise<void>)[] = [];
+
 	constructor(
 		private readonly prisma: PrismaService,
 		private readonly timeline: TimelineService,
+		private readonly broadcast: BroadcastService,
 	) {}
+
+	/** Registers work that must finish before a session is deleted. */
+	onBeforeDelete(hook: (sessionId: string) => Promise<void>) {
+		this.beforeDelete.push(hook);
+	}
+
+	/**
+	 * Deletes the session and everything in it (doc, plan, messages, timeline,
+	 * approvals, usage records, notifications). Owner only. The agent is stopped
+	 * first so nothing writes to it mid-delete. Tokens already used still count
+	 * against the workspace pool. Every member's open tabs are told it's gone.
+	 */
+	async delete(membership: SessionMember): Promise<void> {
+		const sessionId = membership.sessionId;
+		const members = await this.prisma.sessionMember.findMany({
+			where: { sessionId },
+			select: { userId: true },
+		});
+		for (const hook of this.beforeDelete) await hook(sessionId);
+		await this.prisma.session.delete({ where: { id: sessionId } });
+		for (const m of members) {
+			this.broadcast.toUser(m.userId, SocketEvent.SESSION_REMOVED, {
+				sessionId,
+				reason: 'deleted',
+			});
+		}
+	}
 
 	/**
 	 * Creates the session, makes the caller its Owner, and writes timeline event #1,

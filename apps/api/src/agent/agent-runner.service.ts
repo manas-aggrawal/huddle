@@ -83,6 +83,7 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 	async onApplicationBootstrap() {
 		if (!this.options.enabled) return;
 		this.unsubscribe = this.timeline.onCommitted((e) => this.onEvent(e));
+		this.sessions.onBeforeDelete((id) => this.stopSession(id));
 		// Pick up whatever was in progress when the process last stopped.
 		const active = await this.prisma.session.findMany({
 			where: {
@@ -105,6 +106,14 @@ export class AgentRunner implements OnApplicationBootstrap, OnModuleDestroy {
 		const runs = [...this.runs.values()];
 		for (const run of runs) run.stop();
 		await Promise.all(runs.map((r) => r.done));
+	}
+
+	/** Stops the session's loop for good and waits for it to exit (the session is being deleted). */
+	private async stopSession(sessionId: string) {
+		const run = this.runs.get(sessionId);
+		if (!run) return;
+		run.stop();
+		await run.done;
 	}
 
 	/** Whether a loop is running for the session (for tests and diagnostics). */
