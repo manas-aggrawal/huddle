@@ -33,15 +33,35 @@ This is an npm workspaces monorepo. Each app builds and runs on its own. They sh
 
 ## Setup
 
+First time:
+
 ```bash
 nvm use
-npm install                                   # installs every workspace and generates the Prisma client
-cp apps/api/.env.example apps/api/.env
-cd apps/api && docker compose up -d db searxng && cd ../..   # Postgres on :5432, web search on :8080
-npm run migrate -w @huddle/api                # apply database migrations
-npm run seed:demo -w @huddle/api              # optional: the four demo users (see Demo script)
-npm run dev
+npm run setup          # creates the .env files, installs everything, starts Postgres + SearXNG, migrates the database
 ```
+
+Then put a free Groq key in `GROQ_API_KEY` in `apps/api/.env` (see [Pick a model](#pick-a-model-free)), and optionally add the demo users:
+
+```bash
+npm run seed:demo      # mayachen, leopark, rajmehta, danasilva (password Huddle@2026)
+```
+
+Every day after that:
+
+```bash
+npm start              # starts Postgres + SearXNG if they're stopped, then the API, web app and shared watcher
+```
+
+| Command | What it does |
+|---|---|
+| `npm run setup` | One-time setup (safe to re-run; never overwrites your `.env` files) |
+| `npm start` | Services + `npm run dev` |
+| `npm run dev` | API, web app and shared package in watch mode (services must be running) |
+| `npm run services:up` / `services:down` / `services:logs` | Postgres and SearXNG in Docker |
+| `npm run db:migrate` | Apply database migrations (after pulling new ones) |
+| `npm run db:studio` | Browse the database in Prisma Studio |
+| `npm run seed:demo` / `seed:demo:reset` | Add the demo users / also wipe their sessions for a fresh demo |
+| `npm run test:e2e` | Backend end-to-end tests (needs Postgres) |
 
 | URL | What |
 |---|---|

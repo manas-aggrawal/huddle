@@ -11,6 +11,12 @@ services:
       - "${PORT_DATABASE}:5432"
     volumes:
       - db:/var/lib/postgresql/data
+    # Lets `docker compose up --wait` (npm run services:up) return only once Postgres accepts connections.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
   # Web search for the agent (web_search tool). JSON API on http://localhost:8080/search?q=…&format=json
   searxng:
     # Pinned: SearXNG publishes date-stamped builds.
