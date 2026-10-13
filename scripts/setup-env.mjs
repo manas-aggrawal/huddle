@@ -12,7 +12,10 @@ for (const dir of ['apps/api', 'apps/web']) {
 }
 
 const env = readFileSync('apps/api/.env', 'utf8');
-const groqKey = env.match(/^GROQ_API_KEY=(.*)$/m)?.[1]?.replace(/["']/g, '').trim();
+const groqKey = env
+	.match(/^GROQ_API_KEY=(.*)$/m)?.[1]
+	?.replace(/["']/g, '')
+	.trim();
 const usesOllama = /^DEFAULT_MODEL_PROVIDER=["']?ollama/m.test(env);
 if (!groqKey && !usesOllama) {
 	console.log(
