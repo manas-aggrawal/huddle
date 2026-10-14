@@ -59,6 +59,14 @@ export function TimelinePane({
 	const atBottom = useRef(true);
 	const [showJump, setShowJump] = useState(false);
 	const [, tick] = useState(0);
+	// Rows remount as they scroll in and out, so which ones are expanded lives here.
+	const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+	const toggleExpanded = (id: string) =>
+		setExpanded((prev) => {
+			const next = new Set(prev);
+			if (!next.delete(id)) next.add(id);
+			return next;
+		});
 
 	const virtualizer = useVirtualizer({
 		count: events.length,
@@ -165,15 +173,17 @@ export function TimelinePane({
 													<span className="text-muted">{text}</span>
 												</p>
 												{detail && (
-													<p
+													<ClampedText
+														expanded={expanded.has(e.id)}
+														onToggle={() => toggleExpanded(e.id)}
 														className={cx(
-															'mt-0.5 line-clamp-3 text-sm break-words',
+															'mt-0.5 text-sm break-words whitespace-pre-line',
 															p.kind === 'error' && 'text-danger',
 															p.mode === 'INTERRUPT' && 'text-warn',
 														)}
 													>
 														{showMentions(detail, names)}
-													</p>
+													</ClampedText>
 												)}
 												{renderExtra?.(e)}
 												<div className="flex items-center gap-2">
@@ -212,5 +222,51 @@ export function TimelinePane({
 			</div>
 			{footer}
 		</Pane>
+	);
+}
+
+/**
+ * Text cut to three lines, with "Read more" when (and only when) it doesn't
+ * fit. The row's height changes on toggle; the virtualizer re-measures it.
+ */
+function ClampedText({
+	children,
+	expanded,
+	onToggle,
+	className,
+}: {
+	children: ReactNode;
+	expanded: boolean;
+	onToggle: () => void;
+	className?: string;
+}) {
+	const ref = useRef<HTMLParagraphElement>(null);
+	const [overflows, setOverflows] = useState(false);
+	useLayoutEffect(() => {
+		const el = ref.current;
+		if (!el || expanded) return;
+		const check = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
+		check();
+		const observer = new ResizeObserver(check);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [expanded]);
+
+	return (
+		<>
+			<p ref={ref} className={cx(className, !expanded && 'line-clamp-3')}>
+				{children}
+			</p>
+			{(overflows || expanded) && (
+				<button
+					type="button"
+					onClick={onToggle}
+					aria-expanded={expanded}
+					className="mt-0.5 text-xs font-medium text-accent hover:underline"
+				>
+					{expanded ? 'Show less' : 'Read more'}
+				</button>
+			)}
+		</>
 	);
 }
